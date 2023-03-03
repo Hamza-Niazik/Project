@@ -1,0 +1,173 @@
+{
+    "name": "drupal/recommended-project",
+    "description": "Project template for Drupal 9 projects with a relocated document root",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "homepage": "https://www.drupal.org/project/drupal",
+    "support": {
+        "docs": "https://www.drupal.org/docs/user_guide/en/index.html",
+        "chat": "https://www.drupal.org/node/314178"
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://packages.drupal.org/8"
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "ckeditor-plugin/addon",
+                "version": "4.20.0",
+                "type": "drupal-library",
+                "extra": {
+                    "installer-name": "addon"
+                },
+                "dist": {
+                    "url": "https://download.ckeditor.com/templates/releases/templates_4.20.0.zip",
+                    "type": "zip"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "ckeditor-plugin/templates",
+                "version": "4.14.1",
+                "type": "drupal-library",
+                "extra": {
+                    "installer-name": "templates"
+                },
+                "dist": {
+                    "url": "https://download.ckeditor.com/templates/releases/templates_4.14.1.zip",
+                    "type": "zip"
+                }
+            }
+        },
+        {
+            "type": "package",
+            "package": {
+                "name": "ckeditor/templates",
+                "type": "drupal-library",
+                "version": "4.11.1",
+                "dist": {
+                    "type": "zip",
+                    "url": "https://download.ckeditor.com/templates/releases/templates_4.11.1.zip",
+                    "reference": "master"
+                }
+            }
+        }
+    ],
+    "require": {
+        "ckeditor-plugin/addon": "^4.20",
+        "ckeditor-plugin/templates": "^4.14",
+        "ckeditor/templates": "^4.11",
+        "composer/installers": "^1.9",
+        "drupal/admin_toolbar": "^3.1",
+        "drupal/better_exposed_filters": "^5.0",
+        "drupal/ckeditor_templates": "^1.2",
+        "drupal/core-composer-scaffold": "^9.2",
+        "drupal/core-project-message": "^9.2",
+        "drupal/core-recommended": "^9.2",
+        "drupal/duration_field": "^2.0",
+        "drupal/field_formatter_class": "^1.5",
+        "drupal/field_inheritance": "^2.0@RC",
+        "drupal/flexible_permissions": "^1.0@beta",
+        "drupal/fullcalendar_view": "^5.1",
+        "drupal/group": "^3.0@beta",
+        "drupal/heading": "^1.7",
+        "drupal/jsonapi_extras": "^3.19",
+        "drupal/nodeviewcount": "^1.0@alpha",
+        "drupal/recurring_events": "^2.0@RC",
+        "drupal/smart_date_calendar_kit": "^2.1",
+        "drupal/static_generator": "1.x-dev@dev",
+        "drupal/static_suite": "1.0.x-dev@dev",
+        "drupal/view_mode_selector": "^1.0@beta",
+        "drupal/views_dates": "^1.1",
+        "drupal/views_json_source": "^1.1",
+        "drupal/webform": "^6.1",
+        "drupal/wysiwyg_template": "^2.3",
+        "drush/drush": "^10.6"
+    },
+    "conflict": {
+        "drupal/drupal": "*"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "composer/installers": true,
+            "drupal/core-composer-scaffold": true,
+            "drupal/core-project-message": true
+        }
+    },
+    "extra": {
+        "patches": {
+            "drupal/ckeditor_templates": {
+                "Config schema is missing":"https://www.drupal.org/files/issues/2022-07-03/3284787-ckeditor-templates-config-schema.patch"
+            }
+        },
+        "drupal-scaffold": {
+            "locations": {
+                "web-root": "web/"
+            }
+        },
+        "installer-paths": {
+            "web/core": [
+                "type:drupal-core"
+            ],
+            "installer-types": [
+                "drupal-library",
+                "bower-asset",
+                "npm-asset"
+            ],
+            "web/libraries/{$name}": [
+                "type:drupal-library",
+                "type:bower-asset",
+                "type:npm-asset"
+            ],
+            "web/modules/contrib/{$name}": [
+                "type:drupal-module"
+            ],
+            "web/profiles/contrib/{$name}": [
+                "type:drupal-profile"
+            ],
+            "web/themes/contrib/{$name}": [
+                "type:drupal-theme"
+            ],
+            "drush/Commands/contrib/{$name}": [
+                "type:drupal-drush"
+            ],
+            "web/modules/custom/{$name}": [
+                "type:drupal-custom-module"
+            ],
+            "web/profiles/custom/{$name}": [
+                "type:drupal-custom-profile"
+            ],
+            "web/themes/custom/{$name}": [
+                "type:drupal-custom-theme"
+            ]
+        },
+        "drupal-core-project-message": {
+            "include-keys": [
+                "homepage",
+                "support"
+            ],
+            "post-create-project-cmd-message": [
+                "<bg=blue;fg=white>                                                         </>",
+                "<bg=blue;fg=white>  Congratulations, you’ve installed the Drupal codebase  </>",
+                "<bg=blue;fg=white>  from the drupal/recommended-project template!          </>",
+                "<bg=blue;fg=white>                                                         </>",
+                "",
+                "<bg=yellow;fg=black>Next steps</>:",
+                "  * Install the site: https://www.drupal.org/docs/8/install",
+                "  * Read the user guide: https://www.drupal.org/docs/user_guide/en/index.html",
+                "  * Get support: https://www.drupal.org/support",
+                "  * Get involved with the Drupal community:",
+                "      https://www.drupal.org/getting-involved",
+                "  * Remove the plugin that prints this message:",
+                "      composer remove drupal/core-project-message"
+            ]
+        }
+    }
+}

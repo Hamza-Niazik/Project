@@ -1,0 +1,75 @@
+<?php
+
+/**
+ * @file
+ * Install and update functions for the Registration Reminders submodule.
+ */
+
+use Drupal\Core\Field\BaseFieldDefinition;
+
+/**
+ * Install the schema updates for eventseries entities to add registration.
+ *
+ * @see hook_install()
+ */
+function recurring_events_reminders_install() {
+  // Add the registration reminders custom field to eventseries.
+  $storage_definition = BaseFieldDefinition::create('registration_reminders')
+    ->setName('registration_reminders')
+    ->setLabel(t('Event Registration Reminders'))
+    ->setDescription('The event registration reminders configuration.')
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayConfigurable('view', TRUE)
+    ->setRevisionable(TRUE)
+    ->setTranslatable(FALSE)
+    ->setCardinality(1)
+    ->setRequired(FALSE)
+    ->setDisplayOptions('form', [
+      'type' => 'registration_reminders',
+      'weight' => 11,
+    ]);
+
+  \Drupal::entityDefinitionUpdateManager()
+    ->installFieldStorageDefinition('registration_reminders', 'eventseries', 'eventseries', $storage_definition);
+
+  // Add a field to eventinstances to store the desired reminder date.
+  $storage_definition = BaseFieldDefinition::create('timestamp')
+    ->setName('reminder_date')
+    ->setLabel(t('Reminder Date'))
+    ->setDescription('The date that reminders should be sent.')
+    ->setDisplayConfigurable('form', FALSE)
+    ->setDisplayConfigurable('view', FALSE)
+    ->setRevisionable(FALSE)
+    ->setTranslatable(FALSE)
+    ->setCardinality(1)
+    ->setRequired(FALSE);
+
+  \Drupal::entityDefinitionUpdateManager()
+    ->installFieldStorageDefinition('reminder_date', 'eventinstance', 'eventinstance', $storage_definition);
+
+  // Add a field to eventinstances to store date reminders were sent.
+  $storage_definition = BaseFieldDefinition::create('timestamp')
+    ->setName('reminder_sent')
+    ->setLabel(t('Reminder Sent'))
+    ->setDescription('The date that reminders were sent.')
+    ->setDisplayConfigurable('form', FALSE)
+    ->setDisplayConfigurable('view', FALSE)
+    ->setRevisionable(FALSE)
+    ->setTranslatable(FALSE)
+    ->setCardinality(1)
+    ->setRequired(FALSE);
+
+  \Drupal::entityDefinitionUpdateManager()
+    ->installFieldStorageDefinition('reminder_sent', 'eventinstance', 'eventinstance', $storage_definition);
+
+  // Set the default reminder email subject and body config.
+  $config = \Drupal::configFactory()->getEditable('recurring_events_registration.registrant.config');
+  $values = $config->get('notifications');
+  $values['registration_reminder'] = [
+    'enabled' => TRUE,
+    'subject' => 'Upcoming Event Reminder',
+    'body' => '[eventseries:reminder_message]',
+  ];
+  $config->set('notifications', $values);
+  $config->save(TRUE);
+}

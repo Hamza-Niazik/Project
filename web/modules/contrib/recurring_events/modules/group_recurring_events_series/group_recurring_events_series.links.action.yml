@@ -1,0 +1,11 @@
+group_content.group_recurring_events_series_relate_page:
+  route_name: 'entity.group_content.group_recurring_events_series_relate_page'
+  title: 'Add existing events'
+  appears_on:
+    - 'view.group_recurring_events_series.page_1'
+
+group_content.group_recurring_events_series_add_page:
+  route_name: 'entity.group_content.group_recurring_events_series_add_page'
+  title: 'Add new events'
+  appears_on:
+    - 'view.group_recurring_events_series.page_1'

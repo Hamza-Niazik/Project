@@ -1,0 +1,2 @@
+# No composer lock file in a module.
+/composer.lock

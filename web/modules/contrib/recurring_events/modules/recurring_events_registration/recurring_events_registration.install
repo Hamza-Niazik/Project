@@ -1,0 +1,502 @@
+<?php
+
+/**
+ * @file
+ * Installation functionality for the recurring events registration module.
+ */
+
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\recurring_events_registration\Plugin\Field\ComputedRegistrantTitleFieldItemList;
+
+/**
+ * Install the schema updates for eventseries entities to add registration.
+ *
+ * @see hook_install()
+ */
+function recurring_events_registration_install() {
+  $storage_definition = BaseFieldDefinition::create('event_registration')
+    ->setName('event_registration')
+    ->setLabel(t('Event Registration'))
+    ->setDescription('The event registration configuration.')
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayConfigurable('view', TRUE)
+    ->setRevisionable(TRUE)
+    ->setTranslatable(FALSE)
+    ->setCardinality(1)
+    ->setRequired(FALSE)
+    ->setDisplayOptions('form', [
+      'type' => 'event_registration',
+      'weight' => 10,
+    ]);
+
+  \Drupal::entityDefinitionUpdateManager()
+    ->installFieldStorageDefinition('event_registration', 'eventseries', 'eventseries', $storage_definition);
+
+  // When enabling registrations make sure we create all the registrant types
+  // to match the existing series and instance types.
+  foreach (\Drupal::entityTypeManager()->getStorage('eventseries_type')->loadMultiple() as $type) {
+    $registrant_type = \Drupal::entityTypeManager()->getStorage('registrant_type')->load($type->id());
+    if (empty($registrant_type)) {
+      $registrant_type = \Drupal::entityTypeManager()->getStorage('registrant_type')->create([
+        'id' => $type->id(),
+        'label' => $type->label(),
+        'description' => $type->getDescription(),
+      ]);
+      $registrant_type->save();
+    }
+  }
+}
+
+/**
+ * Add the computed title field to registrants.
+ */
+function recurring_events_registration_update_8001() {
+  $storage_definition = BaseFieldDefinition::create('string')
+    ->setLabel(t('Title'))
+    ->setReadOnly(TRUE)
+    ->setComputed(TRUE)
+    ->setClass(ComputedRegistrantTitleFieldItemList::class);
+
+  \Drupal::entityDefinitionUpdateManager()
+    ->installFieldStorageDefinition('title', 'registrant', 'registrant', $storage_definition);
+
+  // Configure the registrants title field.
+  \Drupal::configFactory()->getEditable('recurring_events_registration.registrant.config')
+    ->set('title', '[registrant:email]')
+    ->save(TRUE);
+}
+
+/**
+ * Install the new type basefields for registrant.
+ */
+function recurring_events_registration_update_8002() {
+  $registrant_type = BaseFieldDefinition::create('entity_reference')
+    ->setLabel(t('Bundle'))
+    ->setDescription(t('The registrant type.'))
+    ->setSetting('target_type', 'registrant_type')
+    ->setReadOnly(TRUE);
+
+  \Drupal::entityDefinitionUpdateManager()->installFieldStorageDefinition('bundle', 'registrant', 'registrant', $registrant_type);
+}
+
+/**
+ * Update the event_registration field type to add new settings.
+ */
+function recurring_events_registration_update_8003() {
+  $entity_type_manager = \Drupal::entityTypeManager();
+
+  $storage = $entity_type_manager->getStorage('eventseries');
+  $bundle_definition = $entity_type_manager->getDefinition('eventseries');
+
+  $id_key = $bundle_definition->getKey('id');
+  $revision_key = $bundle_definition->getKey('revision');
+
+  $table_name = $storage->getDataTable() ?: $storage->getBaseTable();
+  $revision_table_name = $storage->getRevisionDataTable() ?: $storage->getRevisionTable();
+
+  $database = \Drupal::database();
+  $definition_manager = \Drupal::entityDefinitionUpdateManager();
+
+  $reg_fields = [
+    'event_registration__value',
+    'event_registration__end_value',
+    'event_registration__registration',
+    'event_registration__registration_type',
+    'event_registration__registration_dates',
+    'event_registration__capacity',
+    'event_registration__waitlist',
+    'event_registration__time_amount',
+    'event_registration__time_type',
+  ];
+
+  $reg_field_mappings = [
+    'event_registration__time_amount' => 'event_registration__instance_schedule_open_amount',
+    'event_registration__time_type' => 'event_registration__instance_schedule_open_units',
+  ];
+
+  $registration_values = $database->select($table_name)
+    ->fields($table_name, [$id_key, $revision_key] + $reg_fields)
+    ->execute()
+    ->fetchAll();
+
+  $update_fields = array_fill_keys($reg_fields, NULL);
+
+  $database->update($table_name)
+    ->fields($update_fields)
+    ->execute();
+
+  $field_storage_definition = $definition_manager->getFieldStorageDefinition('event_registration', 'eventseries');
+  $definition_manager->uninstallFieldStorageDefinition($field_storage_definition);
+
+  $storage_definition = BaseFieldDefinition::create('event_registration')
+    ->setName('event_registration')
+    ->setLabel(t('Event Registration'))
+    ->setDescription('The event registration configuration.')
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayConfigurable('view', TRUE)
+    ->setRevisionable(TRUE)
+    ->setTranslatable(FALSE)
+    ->setCardinality(1)
+    ->setRequired(FALSE)
+    ->setDisplayOptions('form', [
+      'type' => 'event_registration',
+      'weight' => 10,
+    ]);
+
+  \Drupal::entityDefinitionUpdateManager()
+    ->installFieldStorageDefinition('event_registration', 'eventseries', 'eventseries', $storage_definition);
+
+  if (!empty($registration_values)) {
+    foreach ($registration_values as $value) {
+      $values_to_restore = [
+        $id_key => $value->{$id_key},
+        $revision_key => $value->{$revision_key},
+      ];
+      foreach ($reg_fields as $field) {
+        $key = $field;
+        if (isset($reg_field_mappings[$field])) {
+          $key = $reg_field_mappings[$field];
+        }
+        $values_to_restore[$key] = rtrim($value->{$field}, 's');
+        $values_to_restore += [
+          'event_registration__instance_schedule_open' => 'custom',
+          'event_registration__instance_schedule_close' => 'start',
+        ];
+      }
+      $database->update($table_name)
+        ->fields($values_to_restore)
+        ->condition($id_key, $value->{$id_key})
+        ->execute();
+
+      $database->update($revision_table_name)
+        ->fields($values_to_restore)
+        ->condition($id_key, $value->{$id_key})
+        ->execute();
+    }
+  }
+}
+
+/**
+ * Add the default registration message configurations.
+ */
+function recurring_events_registration_update_8004() {
+  // Configure the registrantion messages.
+  \Drupal::configFactory()->getEditable('recurring_events_registration.registrant.config')
+    ->set('successfully_registered', 'Registrant successfully created.')
+    ->set('successfully_registered_waitlist', 'Successfully registered to the waitlist.')
+    ->set('successfully_updated', 'Registrant successfully updated.')
+    ->set('successfully_updated_waitlist', 'Successfully updated waitlist registrant.')
+    ->set('already_registered', 'ser already registered for this event.')
+    ->set('registration_closed', 'Unfortunately, registration is not available at this time.')
+    ->save(TRUE);
+}
+
+/**
+ * Install the new status field.
+ */
+function recurring_events_registration_update_8005() {
+  $definition_update_manager = \Drupal::entityDefinitionUpdateManager();
+
+  // Add the status field.
+  $status = BaseFieldDefinition::create('boolean')
+    ->setLabel(t('Status'))
+    ->setDescription(t('Is this registration complete?'))
+    ->setDefaultValue(FALSE)
+    ->setInitialValue(FALSE)
+    ->setSetting('on_label', 'Complete')
+    ->setDisplayOptions('form', [
+      'type' => 'boolean_checkbox',
+      'settings' => [
+        'display_label' => FALSE,
+      ],
+      'weight' => 100,
+    ])
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayOptions('view', [
+      'type' => 'boolean',
+      'label' => 'above',
+      'weight' => 0,
+      'settings' => [
+        'format' => 'enabled-disabled',
+      ],
+    ])
+    ->setDefaultValue(0)
+    ->setDisplayConfigurable('view', FALSE);
+  $definition_update_manager->installFieldStorageDefinition('status', 'registrant', 'registrant', $status);
+}
+
+/**
+ * Update existing registrants to be marked as completed.
+ */
+function recurring_events_registration_update_8006(&$sandbox) {
+  // This is a multipass update.
+  // Grab all the registrants.
+  if (empty($sandbox['registrants'])) {
+    $registrants = \Drupal::entityTypeManager()
+      ->getStorage('registrant')
+      ->getQuery()
+      ->execute();
+
+    $sandbox['registrants'] = $registrants;
+    $sandbox['max'] = count($registrants);
+    $sandbox['limit'] = 20;
+    $sandbox['progress'] = 0;
+  }
+
+  if (count($sandbox['registrants']) > 0) {
+    // Loop through chunks of 20 registrants at a time.
+    $registrant_ids = array_splice($sandbox['registrants'], 0, $sandbox['limit'], []);
+    if (!empty($registrant_ids)) {
+      $registrants = \Drupal::entityTypeManager()->getStorage('registrant')->loadMultiple($registrant_ids);
+      foreach ($registrants as $registrant) {
+        $registrant->status = 1;
+        $registrant->save();
+        $sandbox['progress']++;
+      }
+      $sandbox['#finished'] = ($sandbox['progress'] / $sandbox['max']);
+    }
+  }
+  else {
+    $sandbox['#finished'] = 1;
+  }
+}
+
+/**
+ * Update the event_registration field type to add unique email field.
+ */
+function recurring_events_registration_update_8007() {
+  $entity_type_manager = \Drupal::entityTypeManager();
+
+  $storage = $entity_type_manager->getStorage('eventseries');
+  $bundle_definition = $entity_type_manager->getDefinition('eventseries');
+
+  $id_key = $bundle_definition->getKey('id');
+  $revision_key = $bundle_definition->getKey('revision');
+
+  $table_name = $storage->getDataTable() ?: $storage->getBaseTable();
+  $revision_table_name = $storage->getRevisionDataTable() ?: $storage->getRevisionTable();
+
+  $database = \Drupal::database();
+  $definition_manager = \Drupal::entityDefinitionUpdateManager();
+
+  // We need to grab all the current data for registration settings for an event
+  // before we remove the registration field, before re-adding it with our new
+  // unique email field.
+  $reg_fields = [
+    'event_registration__value',
+    'event_registration__end_value',
+    'event_registration__registration',
+    'event_registration__registration_type',
+    'event_registration__registration_dates',
+    'event_registration__capacity',
+    'event_registration__waitlist',
+    'event_registration__instance_schedule_open',
+    'event_registration__instance_schedule_open_amount',
+    'event_registration__instance_schedule_open_units',
+    'event_registration__instance_schedule_close',
+    'event_registration__instance_schedule_close_amount',
+    'event_registration__instance_schedule_close_units',
+    'event_registration__instance_schedule_close_type',
+  ];
+
+  $registration_values = $database->select($table_name)
+    ->fields($table_name, [$id_key, $revision_key] + $reg_fields)
+    ->condition('event_registration__registration', 1)
+    ->execute()
+    ->fetchAll();
+
+  // We need to NULL out all the current values, so that we can remove the field
+  // without warning.
+  $update_fields = array_fill_keys($reg_fields, NULL);
+  $database->update($table_name)
+    ->fields($update_fields)
+    ->execute();
+
+  // Remove the existing registration field.
+  $field_storage_definition = $definition_manager->getFieldStorageDefinition('event_registration', 'eventseries');
+  $definition_manager->uninstallFieldStorageDefinition($field_storage_definition);
+
+  // Create a new instance of the registration field and install it.
+  $storage_definition = BaseFieldDefinition::create('event_registration')
+    ->setName('event_registration')
+    ->setLabel(t('Event Registration'))
+    ->setDescription('The event registration configuration.')
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayConfigurable('view', TRUE)
+    ->setRevisionable(TRUE)
+    ->setTranslatable(FALSE)
+    ->setCardinality(1)
+    ->setRequired(FALSE)
+    ->setDisplayOptions('form', [
+      'type' => 'event_registration',
+      'weight' => 10,
+    ]);
+
+  \Drupal::entityDefinitionUpdateManager()
+    ->installFieldStorageDefinition('event_registration', 'eventseries', 'eventseries', $storage_definition);
+
+  // Restore previously stored values.
+  if (!empty($registration_values)) {
+    foreach ($registration_values as $value) {
+      $values_to_restore = [
+        $id_key => $value->{$id_key},
+        $revision_key => $value->{$revision_key},
+      ];
+      foreach ($reg_fields as $field) {
+        $values_to_restore[$field] = rtrim($value->{$field}, 's');
+      }
+      $values_to_restore['event_registration__unique_email_address'] = 0;
+      $database->update($table_name)
+        ->fields($values_to_restore)
+        ->condition($id_key, $value->{$id_key})
+        ->execute();
+
+      $database->update($revision_table_name)
+        ->fields($values_to_restore)
+        ->condition($id_key, $value->{$id_key})
+        ->condition($revision_key, $value->{$revision_key})
+        ->execute();
+    }
+  }
+}
+
+/**
+ * Copies old notification config into new structure.
+ */
+function recurring_events_registration_update_8008() {
+  $configs = \Drupal::config('recurring_events_registration.registrant.config')->get();
+
+  $active_config = \Drupal::configFactory()->getEditable('recurring_events_registration.registrant.config');
+  $active_config->delete();
+
+  \Drupal::service('cache.config')->invalidateAll();
+
+  $new_configs = [];
+  if (!empty($configs)) {
+    foreach ($configs as $config_key => $config_value) {
+      if (strpos($config_key, '_notification_') !== FALSE) {
+        $config_name = preg_replace('/_(enabled|subject|body)$/', '', $config_key);
+        if (strpos($config_key, '_enabled') !== FALSE) {
+          $type = 'enabled';
+        }
+        if (strpos($config_key, 'subject') !== FALSE) {
+          $type = 'subject';
+        }
+        if (strpos($config_key, 'body') !== FALSE) {
+          $type = 'body';
+        }
+        if (!empty($type)) {
+          $new_configs[$config_name][$type] = $config_value;
+        }
+      }
+      else {
+        $active_config->set($config_key, $config_value);
+      }
+    }
+
+    if (!empty($new_configs)) {
+      $active_config->set('notifications', $new_configs);
+      $active_config->save(TRUE);
+    }
+  }
+}
+
+/**
+ * Update the event_registration field type to add permitted roles field.
+ */
+function recurring_events_registration_update_8009() {
+  $entity_type_manager = \Drupal::entityTypeManager();
+
+  $storage = $entity_type_manager->getStorage('eventseries');
+  $bundle_definition = $entity_type_manager->getDefinition('eventseries');
+
+  $id_key = $bundle_definition->getKey('id');
+  $revision_key = $bundle_definition->getKey('revision');
+
+  $table_name = $storage->getDataTable() ?: $storage->getBaseTable();
+  $revision_table_name = $storage->getRevisionDataTable() ?: $storage->getRevisionTable();
+
+  $database = \Drupal::database();
+  $definition_manager = \Drupal::entityDefinitionUpdateManager();
+
+  // We need to grab all the current data for registration settings for an event
+  // before we remove the registration field, before re-adding it with our new
+  // unique email field.
+  $reg_fields = [
+    'event_registration__value',
+    'event_registration__end_value',
+    'event_registration__registration',
+    'event_registration__registration_type',
+    'event_registration__registration_dates',
+    'event_registration__capacity',
+    'event_registration__waitlist',
+    'event_registration__instance_schedule_open',
+    'event_registration__instance_schedule_open_amount',
+    'event_registration__instance_schedule_open_units',
+    'event_registration__instance_schedule_close',
+    'event_registration__instance_schedule_close_amount',
+    'event_registration__instance_schedule_close_units',
+    'event_registration__instance_schedule_close_type',
+    'event_registration__unique_email_address',
+  ];
+
+  $registration_values = $database->select($table_name)
+    ->fields($table_name, [$id_key, $revision_key] + $reg_fields)
+    ->condition('event_registration__registration', 1)
+    ->execute()
+    ->fetchAll();
+
+  // We need to NULL out all the current values, so that we can remove the field
+  // without warning.
+  $update_fields = array_fill_keys($reg_fields, NULL);
+  $database->update($table_name)
+    ->fields($update_fields)
+    ->execute();
+
+  // Remove the existing registration field.
+  $field_storage_definition = $definition_manager->getFieldStorageDefinition('event_registration', 'eventseries');
+  $definition_manager->uninstallFieldStorageDefinition($field_storage_definition);
+
+  // Create a new instance of the registration field and install it.
+  $storage_definition = BaseFieldDefinition::create('event_registration')
+    ->setName('event_registration')
+    ->setLabel(t('Event Registration'))
+    ->setDescription('The event registration configuration.')
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayConfigurable('view', TRUE)
+    ->setRevisionable(TRUE)
+    ->setTranslatable(FALSE)
+    ->setCardinality(1)
+    ->setRequired(FALSE)
+    ->setDisplayOptions('form', [
+      'type' => 'event_registration',
+      'weight' => 10,
+    ]);
+
+  \Drupal::entityDefinitionUpdateManager()
+    ->installFieldStorageDefinition('event_registration', 'eventseries', 'eventseries', $storage_definition);
+
+  // Restore previously stored values.
+  if (!empty($registration_values)) {
+    foreach ($registration_values as $value) {
+      $values_to_restore = [
+        $id_key => $value->{$id_key},
+        $revision_key => $value->{$revision_key},
+      ];
+      foreach ($reg_fields as $field) {
+        $values_to_restore[$field] = rtrim($value->{$field}, 's');
+      }
+      $values_to_restore['event_registration__permitted_roles'] = 0;
+      $database->update($table_name)
+        ->fields($values_to_restore)
+        ->condition($id_key, $value->{$id_key})
+        ->execute();
+
+      $database->update($revision_table_name)
+        ->fields($values_to_restore)
+        ->condition($id_key, $value->{$id_key})
+        ->condition($revision_key, $value->{$revision_key})
+        ->execute();
+    }
+  }
+}

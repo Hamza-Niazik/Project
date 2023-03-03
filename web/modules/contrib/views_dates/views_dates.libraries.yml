@@ -1,0 +1,5 @@
+views_dates.module:
+  version: VERSION
+  css:
+    component:
+      css/views_dates.module.css: {}

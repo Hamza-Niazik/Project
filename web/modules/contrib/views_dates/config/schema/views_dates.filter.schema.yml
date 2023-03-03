@@ -1,0 +1,52 @@
+views.filter_value.views_dates_date_generic:
+  type: views.filter_value.numeric
+  label: 'Date'
+  mapping:
+    type:
+      type: string
+      label: 'Type'
+
+views.filter.views_dates_date_generic:
+  type: views.filter.numeric
+  label: 'Date'
+  mapping:
+    type:
+      type: string
+      label: 'Type'
+
+views.filter.views_dates_day_of_week:
+  type: views.filter.in_operator
+  label: 'DoW'
+  mapping:
+    type:
+      type: string
+      label: 'Type'
+
+views.filter.views_dates_week_of_year:
+  type: views.filter.in_operator
+  label: 'WoY'
+  mapping:
+    type:
+      type: string
+      label: 'Type'
+
+views.filter.views_dates_month_of_year:
+  type: views.filter.in_operator
+  label: 'MoY'
+  mapping:
+    type:
+      type: string
+      label: 'Type'
+
+views.filter.views_dates_quarter_of_year:
+  type: views.filter.in_operator
+  label: 'QoY'
+  mapping:
+    type:
+      type: string
+      label: 'Type'
+
+views.argument.date_dow:
+  type: views.argument.date
+  label: 'Day of Week'
+

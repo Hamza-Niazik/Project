@@ -1,0 +1,247 @@
+# Event Series.
+
+# View an EventSeries.
+entity.eventseries.canonical:
+  path: '/events/series/{eventseries}'
+  defaults:
+    _entity_view: 'eventseries'
+  requirements:
+    _entity_access: 'eventseries.view'
+  options:
+    parameters:
+      eventseries:
+        type: entity:eventseries
+
+# Add an EventSeries.
+entity.eventseries.add_form:
+  path: '/events/add/{eventseries_type}'
+  defaults:
+    _entity_form: eventseries.add
+    _title_callback: '\Drupal\recurring_events\Controller\EventSeriesController::addPageTitle'
+  requirements:
+    _entity_create_access: 'eventseries'
+  options:
+    _recurring_events_operation_route: TRUE
+    parameters:
+      eventseries_type:
+        type: entity:eventseries_type
+
+# Add an EventSeries.
+entity.eventseries.add_page:
+  path: '/events/add'
+  defaults:
+    _title: 'Add event'
+    _controller: '\Drupal\recurring_events\Controller\EventSeriesController::addPage'
+  requirements:
+    _entity_create_access: 'eventseries'
+  options:
+    _recurring_events_operation_route: TRUE
+
+# Edit an EventSeries.
+entity.eventseries.edit_form:
+  path: '/events/series/{eventseries}/edit'
+  defaults:
+    _entity_form: eventseries.edit
+    _title_callback: '\Drupal\recurring_events\Controller\EventSeriesController::editPageTitle'
+  requirements:
+    _entity_access: 'eventseries.edit'
+    eventseries: \d+
+  options:
+    _recurring_events_operation_route: TRUE
+    parameters:
+      eventseries:
+        type: entity:eventseries
+
+# Delete an EventSeries.
+entity.eventseries.delete_form:
+  path: '/events/series/{eventseries}/delete'
+  defaults:
+    _entity_form: eventseries.delete
+    _title_callback: '\Drupal\recurring_events\Controller\EventSeriesController::deletePageTitle'
+  requirements:
+    _entity_access: 'eventseries.delete'
+    eventseries: \d+
+  options:
+    _recurring_events_operation_route: TRUE
+    parameters:
+      eventseries:
+        type: entity:eventseries
+
+# Clone an EventSeries.
+entity.eventseries.clone_form:
+  path: '/events/series/{eventseries}/clone'
+  defaults:
+    _entity_form: eventseries.clone
+    _title_callback: '\Drupal\recurring_events\Controller\EventSeriesController::clonePageTitle'
+  requirements:
+    _entity_access: 'eventseries.clone'
+    eventseries: \d+
+  options:
+    _recurring_events_operation_route: TRUE
+    parameters:
+      eventseries:
+        type: entity:eventseries
+
+# Event Series table list route.
+entity.eventseries.collection:
+  path: '/events/series'
+  defaults:
+    _entity_list: 'eventseries'
+    _title: 'Event Series'
+  requirements:
+  # Checks for permission directly.
+    _permission: 'access eventseries overview'
+
+# Event Instances.
+
+# View an EventInstance.
+entity.eventinstance.canonical:
+  path: '/events/{eventinstance}'
+  defaults:
+    _entity_view: 'eventinstance'
+    _title_callback: '\Drupal\recurring_events\Controller\EventInstanceController::getTitle'
+  requirements:
+    _entity_access: 'eventinstance.view'
+  options:
+    parameters:
+      eventinstance:
+        type: entity:eventinstance
+
+# Edit an EventInstance.
+entity.eventinstance.edit_form:
+  path: '/events/{eventinstance}/edit'
+  defaults:
+    _entity_form: eventinstance.edit
+    _title: 'Edit Event Instance'
+  requirements:
+    _entity_access: 'eventinstance.edit'
+    eventinstance: \d+
+  options:
+    _recurring_events_operation_route: TRUE
+    parameters:
+      eventinstance:
+        type: entity:eventinstance
+
+# Delete an EventInstance.
+entity.eventinstance.delete_form:
+  path: '/events/{eventinstance}/delete'
+  defaults:
+    _entity_form: eventinstance.delete
+    _title: 'Delete Event Instance'
+  requirements:
+    _entity_access: 'eventinstance.delete'
+    eventinstance: \d+
+  options:
+    _recurring_events_operation_route: TRUE
+    parameters:
+      eventinstance:
+        type: entity:eventinstance
+
+# Clone an EventInstance.
+entity.eventinstance.clone_form:
+  path: '/events/{eventinstance}/clone'
+  defaults:
+    # Calls the form.clone controller, defined in the Event Instance entity.
+    _entity_form: eventinstance.clone
+    _title: Clone Event Instance
+  requirements:
+    _entity_access: 'eventinstance.clone'
+  options:
+    _recurring_events_operation_route: TRUE
+    parameters:
+      eventinstance:
+        type: entity:eventinstance
+
+# Event Instance table list route.
+entity.eventinstance.collection:
+  path: '/events'
+  defaults:
+    _entity_list: 'eventinstance'
+    _title: 'Events'
+  requirements:
+  # Checks for permission directly.
+    _permission: 'access eventinstance overview'
+
+# Admin Pages.
+
+# Admin Menu Structure.
+events.admin.overview:
+  path: '/admin/structure/events'
+  defaults:
+    _title: 'Events Management'
+    _controller: '\Drupal\recurring_events\Controller\EventSeriesController::adminPage'
+  requirements:
+    _permission: 'administer eventseries entity+administer eventseries types+administer eventinstance entity+administer eventinstance types+administer registrant entity+administer registrant types'
+
+# Global admin content page.
+events.admin.content:
+  path: '/admin/content/events'
+  defaults:
+    _title: 'Events'
+    _controller: '\Drupal\recurring_events\Controller\EventSeriesController::contentPage'
+  requirements:
+    _permission: 'access administration pages'
+
+# Event Series settings admin page.
+eventseries.settings:
+  path: '/admin/structure/events/series/settings'
+  defaults:
+    _form: '\Drupal\recurring_events\Form\EventSeriesSettingsForm'
+    _title: 'Event Series Settings'
+  requirements:
+    _permission: 'administer eventseries entity'
+
+# Event Instance settings admin page.
+eventinstance.settings:
+  path: '/admin/structure/events/instance/settings'
+  defaults:
+    _form: '\Drupal\recurring_events\Form\EventInstanceSettingsForm'
+    _title: 'Event Instance Settings'
+  requirements:
+    _permission: 'administer eventinstance entity'
+
+# Event Series admin table list route.
+entity.eventseries.admin_collection:
+  path: '/admin/content/events/series'
+  defaults:
+    _entity_list: 'eventseries'
+    _title: 'Event Series'
+  requirements:
+  # Checks for permission directly.
+    _permission: 'access eventseries overview'
+  options:
+    _admin_route: TRUE
+
+# Event Series admin table list route.
+entity.eventinstance.admin_collection:
+  path: '/admin/content/events/instances'
+  defaults:
+    _entity_list: 'eventinstance'
+    _title: 'Event Instances'
+  requirements:
+  # Checks for permission directly.
+    _permission: 'access eventinstance overview'
+  options:
+    _admin_route: TRUE
+
+# Event Series types route.
+entity.eventseries_type.collection:
+  path: '/admin/structure/events/series/types'
+  defaults:
+    _entity_list: 'eventseries_type'
+    _title: 'Event Series types'
+  requirements:
+    _permission: 'administer eventseries types'
+  options:
+    _admin_route: TRUE
+
+# Event Instance types route.
+entity.eventinstance_type.collection:
+  path: '/admin/structure/events/instance/types'
+  defaults:
+    _entity_list: 'eventinstance_type'
+    _title: 'Event Instance types'
+  requirements:
+    _permission: 'administer eventinstance types'
+  options:
+    _admin_route: TRUE

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit colors="true">
+    <php>
+        <!-- Set error reporting to E_ALL. -->
+        <ini name="error_reporting" value="32767"/>
+        <!-- Do not limit the amount of memory tests take to run. -->
+        <ini name="memory_limit" value="-1"/>
+    </php>
+    <testsuites>
+        <testsuite name="Recurring Events Test Suite">
+            <directory>./tests</directory>
+            <!-- directory>./modules/recurring_events_registration/tests</directory -->
+            <!-- directory>./modules/recurring_events_views/tests</directory -->
+        </testsuite>
+    </testsuites>
+</phpunit>

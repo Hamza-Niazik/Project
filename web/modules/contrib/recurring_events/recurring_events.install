@@ -1,0 +1,660 @@
+<?php
+
+/**
+ * @file
+ * Installation and update functionality for the recurring_events module.
+ */
+
+use Drupal\Core\Config\Entity\ConfigEntityType;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\Config\FileStorage;
+
+/**
+ * Set up the config to allow field inheritance for event instances.
+ */
+function recurring_events_install() {
+  // Enable the eventinstance bundles to allow inheritance.
+  $config = \Drupal::configFactory()->getEditable('field_inheritance.config');
+  $bundles = \Drupal::service('entity_type.bundle.info')->getBundleInfo('eventseries');
+  $data = $config->getRawData();
+
+  $included_entities = $data['included_entities'];
+  $included_entities = explode(',', $included_entities);
+  $included_entities[] = 'eventinstance';
+  sort($included_entities);
+  $data['included_entities'] = implode(',', $included_entities);
+
+  $included_bundles = $data['included_bundles'];
+  $included_bundles = explode(',', $included_bundles);
+  foreach ($bundles as $bundle_key => $bundle) {
+    $included_bundles[] = 'eventinstance:' . $bundle_key;
+  }
+  sort($included_bundles);
+  $data['included_bundles'] = implode(',', $included_bundles);
+  $config->setData($data)->save();
+}
+
+/**
+ * Install the excluded and included date fields.
+ */
+function recurring_events_update_8001() {
+  /*
+   * @see https://www.drupal.org/node/3068262
+   */
+
+  $excluded_dates = BaseFieldDefinition::create('daterange')
+    ->setLabel(new TranslatableMarkup('Excluded Dates'))
+    ->setDescription('Dates on which to not create any eventinstances.')
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayConfigurable('view', FALSE)
+    ->setRevisionable(TRUE)
+    ->setTranslatable(FALSE)
+    ->setCardinality(-1)
+    ->setRequired(FALSE)
+    ->setSetting('datetime_type', 'date')
+    ->setDisplayOptions('form', [
+      'type' => 'daterange_default',
+      'weight' => 6,
+      'settings' => [
+        'format_type' => 'html_date',
+        'datetime_type' => 'date',
+      ],
+    ]);
+
+  \Drupal::entityDefinitionUpdateManager()->installFieldStorageDefinition('excluded_dates', 'eventseries', 'eventseries', $excluded_dates);
+
+  $included_dates = BaseFieldDefinition::create('daterange')
+    ->setLabel(new TranslatableMarkup('Included Dates'))
+    ->setDescription('Only create eventinstances if they occur on these dates.')
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayConfigurable('view', FALSE)
+    ->setRevisionable(TRUE)
+    ->setTranslatable(FALSE)
+    ->setCardinality(-1)
+    ->setRequired(FALSE)
+    ->setSetting('datetime_type', 'date')
+    ->setDisplayOptions('form', [
+      'type' => 'daterange_default',
+      'weight' => 6,
+      'settings' => [
+        'format_type' => 'html_date',
+        'datetime_type' => 'date',
+      ],
+    ]);
+
+  \Drupal::entityDefinitionUpdateManager()->installFieldStorageDefinition('included_dates', 'eventseries', 'eventseries', $included_dates);
+}
+
+/**
+ * Update existing series to use the new recur type values.
+ */
+function recurring_events_update_8002(&$sandbox) {
+  // This is a multipass update.
+  // Grab all the weekly or monthly eventseries.
+  if (empty($sandbox['events'])) {
+    $event_series = \Drupal::database()->query('
+      SELECT
+        eventseries_field_data.id
+      FROM
+        eventseries_field_data
+      WHERE
+        recur_type = \'weekly\'
+        OR recur_type = \'monthly\''
+    )->fetchCol(0);
+
+    $sandbox['events'] = $event_series;
+    $sandbox['max'] = count($event_series);
+    $sandbox['limit'] = 20;
+    $sandbox['progress'] = 0;
+  }
+
+  if (count($sandbox['events']) > 0) {
+    // Loop through chunks of 20 events at a time.
+    $events = array_splice($sandbox['events'], 0, $sandbox['limit'], []);
+    if (!empty($events)) {
+      foreach ($events as $event_id) {
+        // Fully load this event so we can update and save it.
+        $event = \Drupal::entityTypeManager()->getStorage('eventseries')->load($event_id);
+        if (!empty($event)) {
+          // If the event was weekly it needs to be weekly_recurring_date.
+          if ($event->getRecurType() == 'weekly') {
+            $event->recur_type = 'weekly_recurring_date';
+            $event->save();
+          }
+          // If the event was monthly it needs to be monthly_recurring_date.
+          elseif ($event->getRecurType() == 'monthly') {
+            $event->recur_type = 'monthly_recurring_date';
+            $event->save();
+          }
+        }
+        $sandbox['progress']++;
+      }
+      echo 'Updated: ' . count($events) . ' eventseries. Total: ' . $sandbox['progress'] . ' of ' . $sandbox['max'] . "\r\n";
+      $sandbox['#finished'] = ($sandbox['progress'] / $sandbox['max']);
+    }
+  }
+  else {
+    $sandbox['#finished'] = 1;
+  }
+}
+
+/**
+ * Configure the event series to have the new recur types and settings config.
+ */
+function recurring_events_update_8003() {
+  // Add the consecutive recurring date type.
+  $consecutive_recurring_date = BaseFieldDefinition::create('consecutive_recurring_date')
+    ->setLabel(t('Consecutive Event'))
+    ->setDescription('The consecutive recurring date configuration.')
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayConfigurable('view', TRUE)
+    ->setRevisionable(TRUE)
+    ->setTranslatable(FALSE)
+    ->setCardinality(1)
+    ->setRequired(FALSE)
+    ->setDisplayOptions('form', [
+      'type' => 'consecutive_recurring_date',
+      'weight' => 1,
+    ]);
+
+  \Drupal::entityDefinitionUpdateManager()->installFieldStorageDefinition('consecutive_recurring_date', 'eventseries', 'eventseries', $consecutive_recurring_date);
+
+  // Add the daily recurring date type.
+  $daily_recurring_date = BaseFieldDefinition::create('daily_recurring_date')
+    ->setLabel(t('Daily Event'))
+    ->setDescription('The daily recurring date configuration.')
+    ->setDisplayConfigurable('form', TRUE)
+    ->setDisplayConfigurable('view', TRUE)
+    ->setRevisionable(TRUE)
+    ->setTranslatable(FALSE)
+    ->setCardinality(1)
+    ->setRequired(FALSE)
+    ->setDisplayOptions('form', [
+      'type' => 'daily_recurring_date',
+      'weight' => 2,
+    ]);
+
+  \Drupal::entityDefinitionUpdateManager()->installFieldStorageDefinition('daily_recurring_date', 'eventseries', 'eventseries', $daily_recurring_date);
+
+  // Enable all the recur types.
+  $config = \Drupal::configFactory()->getEditable('recurring_events.eventseries.config');
+  $config->set('enabled_fields', 'consecutive_recurring_date,daily_recurring_date,weekly_recurring_date,monthly_recurring_date,custom');
+  $config->save(TRUE);
+}
+
+/**
+ * Install new threshold warning config.
+ */
+function recurring_events_update_8004() {
+  $config = \Drupal::configFactory()->getEditable('recurring_events.eventseries.config');
+  $config->set('threshold_warning', 1);
+  $config->set('threshold_count', 200);
+  $config->set('threshold_message', 'Saving this series will create up to @total event instances. This could result in memory exhaustion or site instability.');
+  $config->set('threshold_prevent_save', 0);
+  $config->save(TRUE);
+}
+
+/**
+ * Install the new config entities for event series and instance bundles.
+ */
+function recurring_events_update_8005() {
+  /*
+   * @see https://www.drupal.org/node/3069090
+   */
+  \Drupal::entityDefinitionUpdateManager()->installEntityType(new ConfigEntityType([
+    'id' => 'eventseries_type',
+    'label' => new TranslatableMarkup('Event series type'),
+    'handlers' => [
+      'view_builder' => 'Drupal\Core\Entity\EntityViewBuilder',
+      'list_builder' => 'Drupal\recurring_events\EventSeriesTypeListBuilder',
+      'form' => [
+        'add' => 'Drupal\recurring_events\Form\EventSeriesTypeForm',
+        'edit' => 'Drupal\recurring_events\Form\EventSeriesTypeForm',
+        'delete' => 'Drupal\recurring_events\Form\EventSeriesTypeDeleteForm',
+      ],
+      'route_provider' => [
+        'html' => 'Drupal\recurring_events\EventSeriesTypeHtmlRouteProvider',
+      ],
+    ],
+    'config_prefix' => 'eventseries_type',
+    'bundle_of' => 'eventseries',
+    'admin_permission' => 'administer eventseries entity',
+    'entity_keys' => [
+      'id' => 'id',
+      'label' => 'label',
+      'uuid' => 'uuid',
+    ],
+    'links' => [
+      'canonical' => '/admin/structure/events/series/types/eventseries_type/{eventseries_type}',
+      'add-form' => '/admin/structure/events/series/types/eventseries_type/add',
+      'edit-form' => '/admin/structure/events/series/types/eventseries_type/{eventseries_type}/edit',
+      'delete-form' => '/admin/structure/events/series/types/eventseries_type/{eventseries_type}/delete',
+      'collection' => '/admin/structure/events/series/types/eventseries_type',
+    ],
+    'config_export' => [
+      'label',
+      'id',
+      'description',
+    ],
+  ]));
+
+  \Drupal::entityDefinitionUpdateManager()->installEntityType(new ConfigEntityType([
+    'id' => 'eventinstance_type',
+    'label' => new TranslatableMarkup('Event instance type'),
+    'handlers' => [
+      'view_builder' => 'Drupal\Core\Entity\EntityViewBuilder',
+      'list_builder' => 'Drupal\recurring_events\EventSeriesTypeListBuilder',
+      'form' => [
+        'add' => 'Drupal\recurring_events\Form\EventSeriesTypeForm',
+        'edit' => 'Drupal\recurring_events\Form\EventSeriesTypeForm',
+        'delete' => 'Drupal\recurring_events\Form\EventSeriesTypeDeleteForm',
+      ],
+      'route_provider' => [
+        'html' => 'Drupal\recurring_events\EventSeriesTypeHtmlRouteProvider',
+      ],
+    ],
+    'config_prefix' => 'eventinstance_type',
+    'bundle_of' => 'eventinstance',
+    'admin_permission' => 'administer eventinstance entity',
+    'entity_keys' => [
+      'id' => 'id',
+      'label' => 'label',
+      'uuid' => 'uuid',
+    ],
+    'links' => [
+      'canonical' => '/admin/structure/events/instance/types/eventinstance_type/{eventinstance_type}',
+      'add-form' => '/admin/structure/events/instance/types/eventinstance_type/add',
+      'edit-form' => '/admin/structure/events/instance/types/eventinstance_type/{eventinstance_type}/edit',
+      'delete-form' => '/admin/structure/events/instance/types/eventinstance_type/{eventinstance_type}/delete',
+      'collection' => '/admin/structure/events/instance/types/eventinstance_type',
+    ],
+    'config_export' => [
+      'label',
+      'id',
+      'description',
+    ],
+  ]));
+}
+
+/**
+ * Install the new type basefields for series and instances.
+ */
+function recurring_events_update_8006() {
+  $series_type = BaseFieldDefinition::create('entity_reference')
+    ->setLabel(t('Type'))
+    ->setDescription(t('The eventseries type.'))
+    ->setSetting('target_type', 'eventseries_type')
+    ->setReadOnly(TRUE);
+
+  \Drupal::entityDefinitionUpdateManager()->installFieldStorageDefinition('type', 'eventseries', 'eventseries', $series_type);
+
+  $instance_type = BaseFieldDefinition::create('entity_reference')
+    ->setLabel(t('Type'))
+    ->setDescription(t('The eventinstance type.'))
+    ->setSetting('target_type', 'eventinstance_type')
+    ->setReadOnly(TRUE);
+
+  \Drupal::entityDefinitionUpdateManager()->installFieldStorageDefinition('type', 'eventinstance', 'eventinstance', $instance_type);
+}
+
+/**
+ * Transition existing field inheritance entities over to new module.
+ */
+function recurring_events_update_8007() {
+  \Drupal::service('module_installer')->install(['field_inheritance']);
+  $database = \Drupal::database();
+  $inherited_fields = $database->select('config', 'c')
+    ->fields('c', ['name'])
+    ->condition('name', 'recurring_events.field_inheritance.%', 'LIKE')
+    ->execute()
+    ->fetchCol();
+  $bundles = \Drupal::service('entity_type.bundle.info')->getBundleInfo('eventseries');
+
+  if (!empty($inherited_fields)) {
+    foreach ($inherited_fields as $inherited_field) {
+      $field = \Drupal::configFactory()->getEditable($inherited_field);
+      foreach ($bundles as $bundle_key => $bundle) {
+        $data = $field->getRawData();
+        $id_parts = [
+          'eventinstance',
+          $bundle_key,
+          $data['id'],
+        ];
+        $name = 'field_inheritance.field_inheritance.' . implode('_', $id_parts);
+
+        $data['id'] = implode('_', $id_parts);
+        $data['sourceEntityType'] = 'eventseries';
+        $data['sourceEntityBundle'] = $bundle_key;
+        $data['destinationEntityType'] = 'eventinstance';
+        $data['destinationEntityBundle'] = $bundle_key;
+        $data['plugin'] = 'default_inheritance';
+
+        if (!empty($data['entityField'])) {
+          $data['destinationField'] = $data['entityField'];
+          unset($data['entityField']);
+        }
+        $field->setName($name)->setData($data)->save();
+      }
+    }
+    $database->delete('config')
+      ->condition('name', 'recurring_events.field_inheritance.%', 'LIKE')
+      ->execute();
+  }
+
+  drupal_flush_all_caches();
+}
+
+/**
+ * Enable the eventinstance bundles to allow inheritance.
+ */
+function recurring_events_update_8008() {
+  // Enable the eventinstance bundles to allow inheritance.
+  $config = \Drupal::configFactory()->getEditable('field_inheritance.config');
+  $bundles = \Drupal::service('entity_type.bundle.info')->getBundleInfo('eventseries');
+  $data = $config->getRawData();
+
+  $included_entities = $data['included_entities'];
+  $included_entities = explode(',', $included_entities);
+  $included_entities[] = 'eventinstance';
+  sort($included_entities);
+  $data['included_entities'] = implode(',', $included_entities);
+
+  $included_bundles = $data['included_bundles'];
+  $included_bundles = explode(',', $included_bundles);
+  foreach ($bundles as $bundle_key => $bundle) {
+    $included_bundles[] = 'eventinstance:' . $bundle_key;
+  }
+  sort($included_bundles);
+  $data['included_bundles'] = implode(',', $included_bundles);
+  $config->setData($data)->save();
+
+  drupal_flush_all_caches();
+}
+
+/**
+ * Update all existing event instances.
+ */
+function recurring_events_update_8009(&$sandbox) {
+  // This is a multipass update.
+  if (empty($sandbox['events'])) {
+    $events = \Drupal::entityQuery('eventinstance')->execute();
+    $sandbox['events'] = $events;
+    $sandbox['max'] = count($events);
+    $sandbox['limit'] = 50;
+    $sandbox['progress'] = 0;
+  }
+
+  if (count($sandbox['events']) > 0) {
+    // Loop through chunks of 20 events at a time.
+    $events = array_splice($sandbox['events'], 0, $sandbox['limit'], []);
+    if (!empty($events)) {
+      $loaded_events = \Drupal::entityTypeManager()->getStorage('eventinstance')->loadMultiple($events);
+      $state = \Drupal::keyValue('field_inheritance');
+      foreach ($loaded_events as $event) {
+        $entity_type = $event->getEntityTypeId();
+        $bundle = $event->bundle();
+
+        $state_key = $event->getEntityTypeId() . ':' . $event->uuid();
+        $state_values = $state->get($state_key);
+
+        $inherited_field_ids = \Drupal::entityQuery('field_inheritance')
+          ->condition('sourceEntityType', 'eventseries')
+          ->condition('destinationEntityType', $entity_type)
+          ->condition('destinationEntityBundle', $bundle)
+          ->execute();
+
+        if (!empty($inherited_field_ids)) {
+          $inherited_fields = \Drupal::entityTypeManager()->getStorage('field_inheritance')->loadMultiple($inherited_field_ids);
+          $state_values = [
+            'enabled' => TRUE,
+          ];
+          if (!empty($inherited_fields)) {
+            foreach ($inherited_fields as $inherited_field) {
+              $name = $inherited_field->idWithoutTypeAndBundle();
+              $state_values[$name] = [
+                'entity' => $event->getEventSeries()->id(),
+              ];
+            }
+          }
+        }
+        $state->set($state_key, $state_values);
+
+        $sandbox['progress']++;
+      }
+      echo 'Updated: ' . count($events) . ' event instances. Total: ' . $sandbox['progress'] . ' of ' . $sandbox['max'] . "\r\n";
+      $sandbox['#finished'] = ($sandbox['progress'] / $sandbox['max']);
+    }
+  }
+  else {
+    $sandbox['#finished'] = 1;
+    drupal_flush_all_caches();
+  }
+}
+
+/**
+ * Import new default config added for views submodule support.
+ */
+function recurring_events_update_8010() {
+  $configs = [
+    'core.entity_view_display.eventinstance.default.list',
+    'core.entity_view_mode.eventinstance.list',
+    'core.entity_view_display.eventseries.default.list',
+    'core.entity_view_mode.eventseries.list',
+  ];
+
+  foreach ($configs as $config) {
+    $path = drupal_get_path('module', 'recurring_events') . '/config/install';
+    $source = new FileStorage($path);
+    /** @var \Drupal\Core\Config\StorageInterface $active_storage */
+    $active_storage = \Drupal::service('config.storage');
+    $active_storage->write($config, $source->read($config));
+  }
+}
+
+/**
+ * Add end time option, rather than just duration, to creating event series.
+ */
+function recurring_events_update_8011() {
+  $fields_to_create = [
+    'daily_recurring_date' => [
+      'label' => t('Daily Event'),
+      'description' => 'The daily recurring date configuration.',
+      'weight' => 4,
+    ],
+    'weekly_recurring_date' => [
+      'label' => t('Weekly Event'),
+      'description' => 'The weekly recurring date configuration.',
+      'weight' => 5,
+    ],
+    'monthly_recurring_date' => [
+      'label' => t('Monthly Event'),
+      'description' => 'The monthly recurring date configuration.',
+      'weight' => 6,
+    ],
+  ];
+
+  $updates = [
+    'tables' => [
+      'eventseries_field_data',
+      'eventseries_field_revision',
+      ],
+    'fields' => [
+      'daily_recurring_date__value',
+      'daily_recurring_date__end_value',
+      'weekly_recurring_date__value',
+      'weekly_recurring_date__end_value',
+      'monthly_recurring_date__value',
+      'monthly_recurring_date__end_value',
+    ],
+  ];
+
+  $entity_type_manager = \Drupal::entityTypeManager();
+
+  $storage = $entity_type_manager->getStorage('eventseries');
+  $bundle_definition = $entity_type_manager->getDefinition('eventseries');
+
+  $id_key = $bundle_definition->getKey('id');
+  $revision_key = $bundle_definition->getKey('revision');
+
+  $table_name = $storage->getDataTable() ?: $storage->getBaseTable();
+  $revision_table_name = $storage->getRevisionDataTable() ?: $storage->getRevisionTable();
+
+  $database = \Drupal::database();
+  $definition_manager = \Drupal::entityDefinitionUpdateManager();
+
+  foreach ($updates['tables'] as $table) {
+    foreach ($updates['fields'] as $field) {
+      $database->update($table)
+        ->fields([$field => ''])
+        ->isNull($field)
+        ->execute();
+    }
+  }
+
+  $basefield_definitions = \Drupal::service('entity_field.manager')->getBaseFieldDefinitions('eventseries');
+
+  foreach ($fields_to_create as $machine_name => $config) {
+    $field_fields = [];
+    $schema = $basefield_definitions[$machine_name]->getSchema();
+    foreach ($schema['columns'] as $column_name => $column_config) {
+      if (!in_array($column_name, ['end_time', 'duration_or_end_time'])) {
+        $field_fields[] = $machine_name . '__' . $column_name;
+      }
+    }
+
+    $database_values = $database->select($table_name)
+      ->fields($table_name, array_merge([$id_key, $revision_key], $field_fields))
+      ->execute()
+      ->fetchAll();
+
+    foreach ($database_values as &$value) {
+      $duration_field = $machine_name . '__duration';
+      if (property_exists($value, $duration_field)) {
+        if (empty($value->{$duration_field})) {
+          $value->{$duration_field} = 0;
+        }
+      }
+    }
+
+    // Remove the existing daily/monthly/weekly recurring date field.
+    $field_storage_definition = $definition_manager->getFieldStorageDefinition($machine_name, 'eventseries');
+    $definition_manager->uninstallFieldStorageDefinition($field_storage_definition);
+
+    // Create a new instance of the field.
+    $storage_definition = BaseFieldDefinition::create($machine_name)
+      ->setName($machine_name)
+      ->setLabel($config['label'])
+      ->setDescription($config['label'])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setRevisionable(TRUE)
+      ->setTranslatable(FALSE)
+      ->setCardinality(1)
+      ->setRequired(FALSE)
+      ->setDisplayOptions('form', [
+        'type' => $machine_name,
+        'weight' => $config['weight'],
+      ]);
+
+    \Drupal::entityDefinitionUpdateManager()
+      ->installFieldStorageDefinition($machine_name, 'eventseries', 'eventseries', $storage_definition);
+
+    // Restore previously stored values.
+    if (!empty($database_values)) {
+      foreach ($database_values as $value) {
+        $values_to_restore = [
+          $id_key => $value->{$id_key},
+          $revision_key => $value->{$revision_key},
+        ];
+        foreach ($field_fields as $field) {
+          $values_to_restore[$field] = $value->{$field};
+        }
+        $values_to_restore[$machine_name . '__end_time'] = NULL;
+        $values_to_restore[$machine_name . '__duration_or_end_time'] = 'duration';
+        $database->update($table_name)
+          ->fields($values_to_restore)
+          ->condition($id_key, $value->{$id_key})
+          ->execute();
+
+        $database->update($revision_table_name)
+          ->fields($values_to_restore)
+          ->condition($id_key, $value->{$id_key})
+          ->condition($revision_key, $value->{$revision_key})
+          ->execute();
+      }
+    }
+  }
+}
+
+/**
+ * Remove the event_instance entity reference field, now use computed field.
+ */
+function recurring_events_update_8012() {
+  $definition_manager = \Drupal::entityDefinitionUpdateManager();
+  $field_storage_definition = $definition_manager->getFieldStorageDefinition('event_instances', 'eventseries');
+  $definition_manager->uninstallFieldStorageDefinition($field_storage_definition);
+}
+
+/**
+ * Update any views that use old event instance relationship.
+ */
+function recurring_events_update_8013() {
+
+  $config_factory = \Drupal::configFactory();
+
+  if (!$views = \Drupal\views\Views::getAllViews()) {
+    return [];
+  }
+
+  $messages = [];
+
+  foreach ($views as $view_id => $view) {
+
+    $config = $config_factory->getEditable('views.view.' . $view_id);
+    if (!$displays = $config->get('display')) {
+      continue;
+    }
+
+    $changed = FALSE;
+    foreach ($displays as $display_id => $display) {
+      if (empty($display['display_options']['relationships'])) {
+        continue;
+      }
+      foreach ($display['display_options']['relationships'] as $id => $relationship) {
+        $table = $relationship['table'] ?? NULL;
+        if ($table != 'eventseries__event_instances') {
+          continue;
+        }
+        $relationship['table'] = 'eventseries_field_data';
+        if ($relationship['admin_label'] == 'Event Instance entity') {
+          // Change label if it wasn't customized.
+          $relationship['admin_label'] = 'Event Series Instances';
+        }
+        unset($relationship['entity_field']);
+        $displays[$display_id]['display_options']['relationships'][$id] = $relationship;
+        $changed = TRUE;
+      }
+    }
+
+    if ($changed) {
+      $config->set('display', $displays);
+      $config->save(TRUE);
+      $messages[] = t('Updated view @id.', ['@id' => $view_id]);
+    }
+  }
+
+  if (!empty($messages)) {
+    return implode("</br> \n", $messages);
+  }
+  return t('No Recurring events views to update.');
+}
+
+/**
+ * Set the default event instance plugin creator.
+ */
+function recurring_events_update_8014() {
+  $config = \Drupal::configFactory()->getEditable('recurring_events.eventseries.config');
+  $config->set('creator_plugin', 'recurring_events_eventinstance_recreator');
+  $config->save(TRUE);
+}

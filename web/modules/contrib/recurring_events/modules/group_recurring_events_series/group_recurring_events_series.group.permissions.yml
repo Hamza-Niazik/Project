@@ -1,0 +1,3 @@
+access group_recurring_events_series overview:
+  title: 'Access group recurring events series overview'
+  description: 'Access the overview of all group recurring events series, regardless of type'

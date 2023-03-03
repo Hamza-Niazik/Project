@@ -1,0 +1,5 @@
+widget:
+  version: VERSION
+  css:
+    theme:
+      css/heading.widget.css: {}

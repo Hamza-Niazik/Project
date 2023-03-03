@@ -1,0 +1,11 @@
+name: 'Flexible permissions'
+description: 'Allows you to gather, calculate and cache permissions from a myriad of sources'
+type: 'module'
+core_version_requirement: ^9 || ^10
+dependencies:
+  - 'variationcache:variationcache'
+
+# Information added by Drupal.org packaging script on 2022-05-18
+version: '1.0.0-beta1'
+project: 'flexible_permissions'
+datestamp: 1652866326

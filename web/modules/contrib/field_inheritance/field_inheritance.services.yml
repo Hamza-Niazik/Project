@@ -1,0 +1,4 @@
+services:
+  plugin.manager.field_inheritance:
+    class: Drupal\field_inheritance\FieldInheritancePluginManager
+    parent: default_plugin_manager

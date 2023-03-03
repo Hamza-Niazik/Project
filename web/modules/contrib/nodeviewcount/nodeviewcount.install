@@ -1,0 +1,86 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the nodeviewcount module.
+ */
+
+use Drupal\Core\Database\Database;
+
+/**
+ * Implements hook_schema().
+ */
+function nodeviewcount_schema() {
+  $schema['nodeviewcount'] = [
+    'description' => 'Node views information, including view datetime, user ID and IP address.',
+    'fields' => [
+      'id' => [
+        'description' => 'The unique ID.',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'nid' => [
+        'description' => 'The node ID.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'uid' => [
+        'description' => 'The ID of a user who viewed the node.',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'uip' => [
+        'description' => 'IP address of a user who viewed the node.',
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'datetime' => [
+        'description' => 'The date and time when the node was viewed by the user.',
+        'type' => 'varchar',
+        'length' => 100,
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+    ],
+    'primary key' => ['id'],
+    'indexes' => [
+      'nid' => ['nid'],
+      'uid' => ['uid'],
+      'datetime' => ['datetime'],
+    ],
+  ];
+
+  return $schema;
+}
+
+/**
+ * Create user IP field in database.
+ */
+function nodeviewcount_update_8101() {
+  $field = [
+    'description' => 'IP address of a user who viewed the node.',
+    'type' => 'varchar',
+    'length' => 100,
+    'not null' => TRUE,
+    'default' => 0,
+  ];
+  $schema = Database::getConnection()->schema();
+  $schema->addField('nodeviewcount', 'uip', $field);
+}
+
+/**
+ * Create separate indexes for nid and uid in database.
+ */
+function nodeviewcount_update_8102() {
+  $table = 'nodeviewcount';
+  $spec = nodeviewcount_schema()[$table];
+  $schema = Database::getConnection()->schema();
+  $schema->dropIndex($table, 'nid_uid');
+  $schema->addIndex($table, 'nid', ['nid'], $spec);
+  $schema->addIndex($table, 'uid', ['uid'], $spec);
+}

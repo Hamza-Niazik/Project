@@ -1,0 +1,17 @@
+{
+    "name": "drupal/smart_date_calendar_kit",
+    "type": "drupal-module",
+    "description": "Initial configuration to show your Smart Date values in a Fullcalendar View",
+    "homepage": "https://www.drupal.org/project/smart_date_calendar_kit",
+    "license": "GPL-2.0-or-later",
+    "minimum-stability": "dev",
+    "support": {
+        "issues": "https://www.drupal.org/project/issues/smart_date_calendar_kit",
+        "source": "http://cgit.drupalcode.org/smart_date_calendar_kit"
+    },
+    "require": {
+      "drupal/add_content_by_bundle": "^1.0",
+      "drupal/fullcalendar_view": "^5.0",
+      "drupal/smart_date_starter_kit": "^2.0"
+    }
+}

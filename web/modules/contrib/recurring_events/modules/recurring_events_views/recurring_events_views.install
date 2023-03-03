@@ -1,0 +1,54 @@
+<?php
+
+/**
+ * @file
+ * Install and update functionalit for the recurring_events_views module.
+ */
+
+use Drupal\Core\Serialization\Yaml;
+use Drupal\views\Views;
+
+/**
+ * Install the menu tab view display option for the user registration view.
+ */
+function recurring_events_views_update_8001() {
+  $view = Views::getView('registrations');
+  $display = &$view->storage->getDisplay('user_event_registrations');
+  $display['display_options']['menu'] = [
+    'type' => 'tab',
+    'title' => 'Registrations',
+    'description' => '',
+    'expanded' => FALSE,
+    'parent' => '',
+    'weight' => 0,
+    'context' => '0',
+    'menu_name' => 'account',
+  ];
+  $view->storage->save();
+  $view->storage->invalidateCaches();
+}
+
+/**
+ * Add 'eventinstance id' argument for 'event_registrant_list' view display.
+ */
+function recurring_events_views_update_8002(): void {
+  $config_factory = \Drupal::configFactory();
+
+  $filename = __DIR__ . '/config/optional/views.view.recurring_events_registrations.yml';
+  if (!file_exists($filename)) {
+    return;
+  }
+
+  $default_config = Yaml::decode(file_get_contents($filename));
+
+  if (\Drupal::moduleHandler()->moduleExists('views')) {
+    $view = $config_factory->getEditable('views.view.recurring_events_registrations.yml');
+    if (!$view->isNew()) {
+      $view->set(
+        'display.event_registrant_list.display_options.arguments.id',
+        $default_config['display.event_registrant_list.display_options.arguments.id']
+      );
+      $view->save(TRUE);
+    }
+  }
+}

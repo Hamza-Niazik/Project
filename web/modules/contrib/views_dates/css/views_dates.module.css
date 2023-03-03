@@ -1,0 +1,7 @@
+.views-dates--generic-date-filter {
+  clear: both;
+}
+
+.views-dates--generic-date-filter .active {
+  font-weight: bolder;
+}

@@ -1,0 +1,12 @@
+name: 'Recurring Events Registration'
+type: module
+description: 'Provides the ability to register for recurring events'
+core_version_requirement: ^8.9 || ^9
+package: 'Recurring Events'
+dependencies:
+  - recurring_events:recurring_events
+
+# Information added by Drupal.org packaging script on 2022-09-23
+version: '2.0.0-rc5'
+project: 'recurring_events'
+datestamp: 1663900750

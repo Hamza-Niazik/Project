@@ -1,0 +1,26 @@
+{
+  "name": "drupal/views_dates",
+  "type": "drupal-module",
+  "description": "Extend Views date field filters with time periods, such as weeks and months.",
+  "homepage": "http://drupal.org/project/views_dates",
+  "license": "GPL-2.0+",
+  "authors": [
+    {
+      "name": "Vitaliy Moskvin (alphawebgroup)",
+      "homepage": "https://www.drupal.org/u/alphawebgroup",
+      "role": "Maintainer"
+    },
+    {
+      "name": "Ruth Ivimey-Cook (rivimey)",
+      "homepage": "https://www.drupal.org/u/rivimey",
+      "role": "Maintainer"
+    }
+  ],
+  "support": {
+    "issues": "https://www.drupal.org/project/issues/views_dates",
+    "source": "https://git.drupalcode.org/project/views_dates"
+  },
+  "require": {
+    "drupal/core": "^8.8 || ^9"
+  }
+}

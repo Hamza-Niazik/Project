@@ -1,0 +1,10 @@
+field.field_settings.heading:
+  type: mapping
+  label: 'Heading settings'
+  mapping:
+    label:
+      type: string
+      label: 'Label for the text part of the heading'
+    sizes:
+      type: array
+      label: 'Allowed heading sizes'

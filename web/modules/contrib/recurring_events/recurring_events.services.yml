@@ -1,0 +1,12 @@
+services:
+  recurring_events.admin_path.route_subscriber:
+    class: Drupal\recurring_events\EventSubscriber\RecurringEventsAdminRouteSubscriber
+    arguments: ['@config.factory', '@router.builder']
+    tags:
+      - { name: event_subscriber }
+  recurring_events.event_creation_service:
+    class: Drupal\recurring_events\EventCreationService
+    arguments: ['@string_translation', '@database', '@logger.factory', '@messenger', '@plugin.manager.field.field_type', '@entity_field.manager', '@module_handler', '@entity_type.manager', '@keyvalue']
+  plugin.manager.event_instance_creator:
+    class: Drupal\recurring_events\EventInstanceCreatorPluginManager
+    parent: default_plugin_manager

@@ -1,0 +1,152 @@
+<?php
+
+/**
+ * @file
+ * Contains recurring_events_views.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\views\ViewExecutable;
+use Drupal\views\Plugin\views\query\QueryPluginBase;
+use Drupal\Component\Utility\Html;
+use Symfony\Component\Routing\Exception\RouteNotFoundException;
+
+/**
+ * Implements hook_help().
+ */
+function recurring_events_views_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the recurring_events_views module.
+    case 'help.page.recurring_events_views':
+      $text = file_get_contents(__DIR__ . '/README.md');
+      if (!\Drupal::moduleHandler()->moduleExists('markdown')) {
+        return '<pre>' . Html::escape($text) . '</pre>';
+      }
+      else {
+        // Use the Markdown filter to render the README.
+        $filter_manager = \Drupal::service('plugin.manager.filter');
+        $settings = \Drupal::configFactory()->get('markdown.settings')->getRawData();
+        $config = ['settings' => $settings];
+        $filter = $filter_manager->createInstance('markdown', $config);
+        return $filter->process($text, 'en');
+      }
+      break;
+  }
+}
+
+/**
+ * Implements hook_local_tasks_alter().
+ */
+function recurring_events_views_local_tasks_alter(&$local_tasks) {
+  if (\Drupal::moduleHandler()->moduleExists('recurring_events_registration')) {
+    try {
+      if (\Drupal::service('router.route_provider')->getRouteByName('view.recurring_events_registrations.event_registrant_list')) {
+        if (!empty($local_tasks['entity.registrant.instance_listing'])) {
+          $local_tasks['entity.registrant.instance_listing']['route_name'] = 'view.recurring_events_registrations.event_registrant_list';
+          $local_tasks['entity.registrant.instance_listing']['id'] = 'view.recurring_events_registrations';
+        }
+      }
+    }
+    catch (RouteNotFoundException $exception) {
+      \Drupal::logger('recurring_events_views')->error($exception->getMessage());
+    }
+
+    if (!empty($local_tasks['views_view:view.recurring_events_registrations.user_event_registrations'])) {
+      unset($local_tasks['entity.user.registrations']);
+    }
+  }
+}
+
+/**
+ * Implements hook_views_query_alter().
+ */
+function recurring_events_views_views_query_alter(ViewExecutable $view, QueryPluginBase $query) {
+  // Because registration is complicated by series vs instance registration we
+  // need to modify the view to accomodate that. If an event has series
+  // registration then viewing the registration list on any of the instances
+  // should display all registrations for that event. However, if the event has
+  // instance registration, then we should only see registrations for the
+  // particular instance being viewed.
+  if ($view->id() === 'registrations' && $view->current_display === 'event_registrant_list') {
+    if (\Drupal::moduleHandler()->moduleExists('recurring_events_registration')) {
+      $eventinstance_id = \Drupal::routeMatch()->getParameters()->get('eventinstance');
+
+      if (!empty($eventinstance_id)) {
+        $eventinstance = \Drupal::entityTypeManager()->getStorage('eventinstance')->load($eventinstance_id);
+        if (!empty($eventinstance) && !empty($eventinstance->id())) {
+          $service = \Drupal::service('recurring_events_registration.creation_service');
+          $service->setEventInstance($eventinstance);
+          switch ($service->getRegistrationType()) {
+            case 'instance':
+              $field = 'registrant.eventinstance_id';
+              $value = [
+                $eventinstance->id(),
+              ];
+              break;
+
+            case 'series':
+            default:
+              $field = 'registrant.eventseries_id';
+              $value = [
+                $eventinstance->getEventSeries()->id(),
+              ];
+              break;
+          }
+        }
+
+        if (!empty($field) && !empty($value)) {
+          $query->where[1]['conditions'][] = [
+            'field' => $field,
+            'value' => $value,
+            'operator' => '=',
+          ];
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_views_pre_render().
+ */
+function recurring_events_views_views_pre_render(ViewExecutable $view) {
+  // Because registration is complicated by series vs instance registration we
+  // need to modify the view title to accomodate that.
+  if ($view->id() === 'registrations' && $view->current_display === 'event_registrant_list') {
+    if (\Drupal::moduleHandler()->moduleExists('recurring_events_registration')) {
+      $eventinstance_id = \Drupal::routeMatch()->getParameters()->get('eventinstance');
+
+      if (!empty($eventinstance_id)) {
+        $eventinstance = \Drupal::entityTypeManager()->getStorage('eventinstance')->load($eventinstance_id);
+        $service = \Drupal::service('recurring_events_registration.creation_service');
+        if (!empty($eventinstance)) {
+          $service->setEventInstance($eventinstance);
+          $config = \Drupal::config('recurring_events.eventinstance.config');
+          $format = $config->get('date_format');
+          $name = $eventinstance->title->value;
+          switch ($service->getRegistrationType()) {
+            case 'instance':
+              $timezone = new \DateTimeZone(date_default_timezone_get());
+              $title = t('Registrations for %name on %date', [
+                '%name' => $name,
+                '%date' => $eventinstance->date->start_date->setTimezone($timezone)->format($format),
+              ]);
+              break;
+
+            case 'series':
+            default:
+              $title = t('Registrations for series: %name', [
+                '%name' => $name,
+              ]);
+              break;
+          }
+
+          if (!empty($title)) {
+            $view->setTitle($title);
+          }
+        }
+      }
+    }
+
+  }
+}

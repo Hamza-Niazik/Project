@@ -1,0 +1,13 @@
+name: 'Add Content by Bundle'
+description: 'Provides a views header/footer link to add a node for a specific bundle'
+package: Views
+type: module
+core: 8.x
+core_version_requirement: ^8 || ^9 || ^10
+dependencies:
+  - drupal:views
+
+# Information added by Drupal.org packaging script on 2022-06-22
+version: '1.2.1'
+project: 'add_content_by_bundle'
+datestamp: 1655883541

@@ -1,0 +1,48 @@
+<?php
+
+/**
+ * @file
+ * Module hooks.
+ */
+
+/**
+ * Implements hook_theme().
+ */
+function heading_theme($existing, $type, $theme, $path) {
+  return [
+    'heading' => [
+      'template' => 'heading',
+      'path' => $path . '/templates',
+      'variables' => [
+        'size' => NULL,
+        'text' => NULL,
+      ],
+    ],
+  ];
+}
+
+/**
+ * Implements hook_token_info_alter().
+ *
+ * This adds the missing token info for automatically detected tokens.
+ */
+function heading_token_info_alter(&$info) {
+  $entities = \Drupal::service('entity_field.manager')->getFieldMap();
+  foreach ($entities as $entity_key => $entity) {
+    foreach ($entity as $field_key => $field) {
+      if ($field['type'] !== 'heading' ) {
+        continue;
+      }
+
+      $token_key = sprintf('%s-%s', $entity_key, $field_key);
+      $info['tokens'][$token_key]['size'] = [
+        'name' => t('Heading: Size'),
+        'description' => t('The size (h1, h2, ...) of the heading.'),
+      ];
+      $info['tokens'][$token_key]['text'] = [
+        'name' => t('Heading: Text'),
+        'description' => t('The text (content) of the heading.'),
+      ];
+    }
+  }
+}

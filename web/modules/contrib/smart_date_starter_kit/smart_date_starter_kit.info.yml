@@ -1,0 +1,16 @@
+name: 'Smart Date Starter Kit'
+type: module
+description: 'A content type and view to help you get started with Smart Date.'
+core_version_requirement: ^8 || ^9 || ^10
+package: 'Field types'
+dependencies:
+  - 'smart_date:smart_date'
+  - 'drupal:menu_ui'
+  - 'drupal:node'
+  - 'drupal:user'
+  - 'add_content_by_bundle:add_content_by_bundle'
+
+# Information added by Drupal.org packaging script on 2022-07-30
+version: '2.2.0'
+project: 'smart_date_starter_kit'
+datestamp: 1659172412

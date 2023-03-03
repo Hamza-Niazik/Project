@@ -1,0 +1,13 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the group module.
+ */
+
+/**
+ * Implements hook_update_last_removed().
+ */
+function group_update_last_removed() {
+  return 9210;
+}

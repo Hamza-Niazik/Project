@@ -1,0 +1,13 @@
+langcode: en
+status: true
+dependencies: {  }
+id: eventinstance_default_description
+label: Description
+type: append
+sourceEntityType: eventseries
+sourceEntityBundle: default
+sourceField: body
+destinationEntityType: eventinstance
+destinationEntityBundle: default
+destinationField: body
+plugin: default_inheritance

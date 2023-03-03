@@ -1,0 +1,58 @@
+<?php
+
+/**
+ * @file
+ * Installation and update hooks for the field_inheritance module.
+ */
+
+use Drupal\Core\Language\LanguageInterface;
+
+/**
+ * Update existing plugins to use the new default plugin.
+ */
+function field_inheritance_update_8001() {
+  $inheritances = \Drupal::entityTypeManager()->getStorage('field_inheritance')->loadMultiple();
+  if (!empty($inheritances)) {
+    foreach ($inheritances as $inheritance) {
+      if ($inheritance->plugin() !== 'entity_reference_inheritance') {
+        $inheritance->setPlugin('default_inheritance');
+        $inheritance->save();
+      }
+    }
+  }
+}
+
+/**
+ * Update existing inheritances from old naming format.
+ */
+function field_inheritance_update_8002() {
+  $inheritances = \Drupal::entityTypeManager()->getStorage('field_inheritance')->loadMultiple();
+  if (!empty($inheritances)) {
+    foreach ($inheritances as $inheritance) {
+      // Mimic the MachineName functionality to generate a machine name.
+      $label = \Drupal::service('transliteration')->transliterate($inheritance->get('label'), LanguageInterface::LANGCODE_DEFAULT, '_');
+      $label = strtolower($label);
+      $label = preg_replace('/[^a-z0-9_]+/', '_', $label);
+      $id = preg_replace('/_+/', '_', $label);
+
+      if ($inheritance->get('id') !== $inheritance->destinationEntityType() . '_' . $inheritance->destinationEntityBundle() . '_' . $id) {
+        $new_inheritance = \Drupal::entityTypeManager()->getStorage('field_inheritance')->create(
+          [
+            'id' => $id,
+            'label' => $inheritance->get('label'),
+            'type' => $inheritance->get('type'),
+            'sourceEntityType' => $inheritance->sourceEntityType(),
+            'sourceEntityBundle' => $inheritance->sourceEntityBundle(),
+            'sourceField' => $inheritance->sourceField(),
+            'destinationEntityType' => $inheritance->destinationEntityType(),
+            'destinationEntityBundle' => $inheritance->destinationEntityBundle(),
+            'destinationField' => $inheritance->destinationField(),
+            'plugin' => $inheritance->plugin(),
+          ]
+        );
+        $new_inheritance->save();
+        $inheritance->delete();
+      }
+    }
+  }
+}

@@ -1,0 +1,2 @@
+route_callbacks:
+  - '\Drupal\group_recurring_events_series\Routing\GroupEventSeriesRouteProvider::getRoutes'

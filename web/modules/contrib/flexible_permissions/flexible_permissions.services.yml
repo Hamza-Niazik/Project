@@ -1,0 +1,46 @@
+services:
+  flexible_permissions.chain_calculator:
+    class: 'Drupal\flexible_permissions\ChainPermissionCalculator'
+    arguments: ['@variation_cache.flexible_permissions', '@variation_cache.flexible_permissions_memory', '@cache.flexible_permissions_memory', '@account_switcher']
+    tags:
+      - { name: 'service_collector', call: 'addCalculator', tag: 'flexible_permission_calculator' }
+  flexible_permissions.checker:
+    class: 'Drupal\flexible_permissions\PermissionChecker'
+    arguments: ['@flexible_permissions.chain_calculator']
+
+  # Define persistent and memory caches for storing the calculated permissions.
+  cache.flexible_permissions:
+    class: 'Drupal\Core\Cache\CacheBackendInterface'
+    factory: 'cache_factory:get'
+    arguments: ['flexible_permissions']
+    tags:
+      - { name: 'cache.bin' }
+  cache.flexible_permissions_memory:
+    class: 'Drupal\Core\Cache\CacheBackendInterface'
+    factory: 'cache_factory:get'
+    arguments: [ 'flexible_permissions_memory' ]
+    tags:
+      - { name: 'cache.bin', default_backend: 'cache.backend.corefix_memory_no_serialize' }
+
+  # Build a variation cache on top of them to handle cache redirects.
+  variation_cache.flexible_permissions:
+    class: 'Drupal\variationcache\Cache\VariationCacheInterface'
+    factory: 'variation_cache_factory:get'
+    arguments: ['flexible_permissions']
+  variation_cache.flexible_permissions_memory:
+    class: 'Drupal\variationcache\Cache\VariationCacheInterface'
+    factory: 'variation_cache_factory:get'
+    arguments: ['flexible_permissions_memory']
+
+  # In 8.6.x, core introduced a new static cache that does not serialize its
+  # data, unlike the cache.static service. This entity.memory_cache service has
+  # two major drawbacks: First of all, it is named confusingly as it can work
+  # for almost anything, not just entities. Secondly, it is not declared the
+  # way cache backend services should be declared, meaning it cannot make
+  # proper use of cache tags. In order to fix this, we declare the cache and
+  # its factory the right way, albeit prefixed with corefix_ so that we do not
+  # collide with core if it ever fixes this.
+  # @todo Follow up in: https://www.drupal.org/project/drupal/issues/2973286
+  # @todo Follow up in: https://www.drupal.org/project/drupal/issues/3016690
+  cache.backend.corefix_memory_no_serialize:
+    class: 'Drupal\flexible_permissions\Cache\MemoryCacheFactory'

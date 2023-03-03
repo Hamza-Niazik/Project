@@ -1,0 +1,2 @@
+included_entities: 'block_content,file,node,taxonomy_term'
+included_bundles: 'block_content:basic,file:file,node:article,node:page,taxonomy_term:tags'

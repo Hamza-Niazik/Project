@@ -1,0 +1,13 @@
+{
+  "name": "drupal/field_inheritance",
+  "type": "drupal-module",
+  "description": "Provides the ability to inherit data from one entity to another",
+  "keywords": ["Drupal"],
+  "license": "GPL-2.0-or-later",
+  "homepage": "https://www.drupal.org/project/field_inheritance",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "https://www.drupal.org/project/issues/field_inheritance",
+    "source": "http://cgit.drupalcode.org/field_inheritance"
+  }
+}

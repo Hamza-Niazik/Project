@@ -1,0 +1,155 @@
+<?php
+
+/**
+ * @file
+ * Provides views handlers for date fields.
+ */
+
+use Drupal\Core\Entity\ContentEntityTypeInterface;
+
+/**
+ * Implements hook_views_data_alter().
+ *
+ * @param array $data
+ */
+function views_dates_views_data_alter(array &$data) {
+
+  // Get all entity types to next handling.
+  $entity_types = \Drupal::entityTypeManager()->getDefinitions();
+  // Entity types what we're going to skip.
+  $entity_types_skip = ['node', 'user', 'taxonomy_term'];
+  // Entity field manager.
+  /** @var \Drupal\Core\Entity\EntityFieldManager $entity_field_manager */
+  $entity_field_manager = \Drupal::service('entity_field.manager');
+
+  // Process all entity types.
+  foreach ($entity_types as $entity_type_id => $entity_type) {
+    // We need to process only content entity types and skip entity types what we defined to skip before.
+    if ($entity_type instanceof ContentEntityTypeInterface && !in_array($entity_type_id, $entity_types_skip)) {
+      // Base fields what we need to process.
+      $base_field_definitions = $entity_field_manager->getBaseFieldDefinitions($entity_type_id);
+      // Handle each field what is implemented with timestamp, created or changed field type.
+      $timestamp_field_types = ['timestamp', 'created', 'changed'];
+
+      foreach ($base_field_definitions as $base_field_id => $base_field_definition) {
+        if (in_array($base_field_definition->getType(), $timestamp_field_types)) {
+          // The table name where the data stored for specific entity.
+          $table_name = $entity_type->getDataTable() ?: $entity_type->getBaseTable();
+          // Field label for next manipulations.
+          $base_field_label = (string) $base_field_definition->getLabel();
+
+          // Add generic date argument.
+          $data[$table_name][$base_field_id . '_generic'] = [
+            'title' => t('@label as a date', ['@label' => $base_field_label]),
+            'help' => t('@label in a generic format.', ['@label' => $base_field_label]),
+            'argument' => [
+              'field' => $base_field_id,
+              'id' => 'views_dates_date_generic',
+            ],
+            'filter' => [
+              'field' => $base_field_id,
+              'id' => 'views_dates_date_generic',
+            ],
+          ];
+
+          // Add timestamp specific arguments.
+          $data[$table_name][$base_field_id . '_fulldate'] = [
+            'title' => t('@label as full date', ['@label' => $base_field_label]),
+            'help' => t('@label as year, month, and day together (YYYYMMDD).', ['@label' => $base_field_label]),
+            'argument' => [
+              'field' => $base_field_id,
+              'id' => 'date_fulldate',
+            ],
+          ];
+
+          $data[$table_name][$base_field_id . '_year_month'] = [
+            'title' => t('@label as year and month', ['@label' => $base_field_label]),
+            'help' => t('@label as year and month together (YYYYMM).', ['@label' => $base_field_label]),
+            'argument' => [
+              'field' => $base_field_id,
+              'id' => 'date_year_month',
+            ],
+          ];
+
+          $data[$table_name][$base_field_id . '_year'] = [
+            'title' => t('@label as year', ['@label' => $base_field_label]),
+            'help' => t('@label in the form of YYYY (year).', ['@label' => $base_field_label]),
+            'argument' => [
+              'field' => $base_field_id,
+              'id' => 'date_year',
+            ],
+          ];
+
+          $data[$table_name][$base_field_id . '_month'] = [
+            'title' => t('@label as month number', ['@label' => $base_field_label]),
+            'help' => t('@label in the form of MM (01 - 12) (month).', ['@label' => $base_field_label]),
+            'argument' => [
+              'field' => $base_field_id,
+              'id' => 'date_month',
+            ],
+          ];
+
+          $data[$table_name][$base_field_id . '_day'] = [
+            'title' => t( '@label as day of month', ['@label' => $base_field_label]),
+            'help' => t( '@label as the day of the month, in the form 01 - 31.', ['@label' => $base_field_label]),
+            'argument' => [
+              'field' => $base_field_id,
+              'id' => 'date_day',
+            ],
+          ];
+
+          $data[$table_name][$base_field_id . '_dow'] = [
+            'title' => t( '@label as day name', ['@label' => $base_field_label]),
+            'help' => t( '@label as day name 0 - 6, representing Sunday (0) to Saturday (6).', ['@label' => $base_field_label]),
+            'argument' => [
+              'field' => $base_field_id,
+              'id' => 'date_dow',
+            ],
+            'filter' => [
+              'field' => $base_field_id,
+              'id' => 'views_dates_day_of_week',
+            ],
+          ];
+
+          $data[$table_name][$base_field_id . '_moy'] = [
+            'title' => t( '@label as month name', ['@label' => $base_field_label]),
+            'help' => t( '@label as month name 1 - 12, representing January (1) to December (12).', ['@label' => $base_field_label]),
+            'argument' => [
+              'field' => $base_field_id,
+              'id' => 'date_dow',
+            ],
+            'filter' => [
+              'field' => $base_field_id,
+              'id' => 'views_dates_month_of_year',
+            ],
+          ];
+
+          $data[$table_name][$base_field_id . '_quarter'] = [
+            'title' => t( '@label as a quarter', ['@label' => $base_field_label]),
+            'help' => t( '@label as quarter 1 - 4, representing Q1 (1) to Q4 (4).', ['@label' => $base_field_label]),
+            'argument' => [
+              'field' => $base_field_id,
+              'id' => 'date_dow',
+            ],
+            'filter' => [
+              'field' => $base_field_id,
+              'id' => 'views_dates_month_of_year',
+            ],
+          ];
+
+          $data[$table_name][$base_field_id . '_week'] = [
+            'title' => t( '@label as week of year', ['@label' => $base_field_label]),
+            'help' => t( '@label as the week of the year 01 - 53.', ['@label' => $base_field_label]),
+            'argument' => [
+              'field' => $base_field_id,
+              'id' => 'date_week',
+            ],
+          ];
+
+        }
+      }
+
+    }
+  }
+
+}

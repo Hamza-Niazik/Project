@@ -1,0 +1,32 @@
+{#
+/**
+ * @file
+ * Default theme implementation to list eventseries types available.
+ *
+ * This list is displayed on the Add events page.
+ *
+ * Available variables:
+ * - types: A list of eventseries types, each with the following properties:
+ *   - add_link: Link to create an event of this type.
+ *   - description: Description of this type of eventseries.
+ *
+ * @see template_preprocess_eventseries_add_list()
+ *
+ * @ingroup themeable
+ */
+#}
+{% if types is not empty %}
+  <dl>
+    {% for type in types %}
+      <dt>{{ type.add_link }}</dt>
+      <dd>{{ type.description }}</dd>
+    {% endfor %}
+  </dl>
+{% else %}
+  <p>
+    {% set create_content = path('eventseries_type.add') %}
+    {% trans %}
+      You have not created any event types yet. Go to the <a href="{{ create_content }}">eventseries type creation page</a> to add a new eventseries type.
+    {% endtrans %}
+  </p>
+{% endif %}

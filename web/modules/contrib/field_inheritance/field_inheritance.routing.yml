@@ -1,0 +1,26 @@
+# Field Inheritance routes.
+field_inheritance.field_inheritance:
+  path: '/admin/structure/field_inheritance'
+  defaults:
+    _controller: '\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage'
+    _title: 'Field Inheritance'
+  requirements:
+    _permission: 'administer field inheritance'
+
+# AJAX Field Inheritance creation form.
+field_inheritance.creation_form:
+  path: '/ajax/field_inheritance/creation/{entity_type}/{entity_bundle}'
+  defaults:
+    _title: 'Create Field Inheritance'
+    _controller: '\Drupal\field_inheritance\Controller\FieldInheritanceController::ajaxCreationForm'
+  requirements:
+    _permission: 'administer field inheritance'
+
+# Field Inheritance settings admin page.
+field_inheritance.settings:
+  path: '/admin/structure/field_inheritance/settings'
+  defaults:
+    _form: '\Drupal\field_inheritance\Form\FieldInheritanceSettingsForm'
+    _title: 'Settings'
+  requirements:
+    _permission: 'administer field inheritance'

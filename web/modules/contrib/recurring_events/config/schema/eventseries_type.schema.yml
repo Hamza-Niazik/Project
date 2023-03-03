@@ -1,0 +1,15 @@
+recurring_events.eventseries_type.*:
+  type: config_entity
+  label: 'Event series type config'
+  mapping:
+    id:
+      type: string
+      label: 'ID'
+    label:
+      type: label
+      label: 'Label'
+    description:
+      type: string
+      label: 'Description'
+    uuid:
+      type: string

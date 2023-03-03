@@ -1,0 +1,17 @@
+{
+  "name": "drupal/smart_date_starter_kit",
+  "type": "drupal-module",
+  "description": "A content type and view to help you get started with Smart Date.",
+  "keywords": ["Drupal"],
+  "license": "GPL-2.0+",
+  "homepage": "https://www.drupal.org/project/smart_date_starter_kit",
+  "minimum-stability": "dev",
+  "support": {
+    "issues": "https://www.drupal.org/project/issues/smart_date_starter_kit",
+    "source": "https://git.drupalcode.org/project/smart_date_starter_kit"
+  },
+  "require": {
+    "drupal/add_content_by_bundle": "^1.0",
+    "drupal/smart_date": ">=3.0"
+  }
+}

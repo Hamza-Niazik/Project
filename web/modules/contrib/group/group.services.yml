@@ -1,0 +1,178 @@
+services:
+  access_check.group.permission:
+    class: 'Drupal\group\Access\GroupPermissionAccessCheck'
+    tags:
+      - { name: 'access_check', applies_to: '_group_permission' }
+  access_check.group.member:
+    class: 'Drupal\group\Access\GroupMemberAccessCheck'
+    tags:
+      - { name: 'access_check', applies_to: '_group_member' }
+  access_check.group.installed_content:
+    class: 'Drupal\group\Access\GroupInstalledContentAccessCheck'
+    tags:
+      - { name: 'access_check', applies_to: '_group_installed_content' }
+  access_check.group.owns_content:
+    class: 'Drupal\group\Access\GroupOwnsContentAccessCheck'
+    tags:
+      - { name: 'access_check', applies_to: '_group_owns_content' }
+  access_check.group_relationship.create:
+    class: 'Drupal\group\Access\GroupRelationshipCreateAccessCheck'
+    arguments: ['@entity_type.manager']
+    tags:
+      - { name: 'access_check', applies_to: '_group_relationship_create_access' }
+  access_check.group_relationship.create_any:
+    class: 'Drupal\group\Access\GroupRelationshipCreateAnyAccessCheck'
+    arguments: ['@entity_type.manager']
+    tags:
+      - { name: 'access_check', applies_to: '_group_relationship_create_any_access' }
+  access_check.group_relationship.create_entity:
+    class: 'Drupal\group\Access\GroupRelationshipCreateEntityAccessCheck'
+    tags:
+      - { name: 'access_check', applies_to: '_group_relationship_create_entity_access' }
+  access_check.group_relationship.create_any_entity:
+    class: 'Drupal\group\Access\GroupRelationshipCreateAnyEntityAccessCheck'
+    tags:
+      - { name: 'access_check', applies_to: '_group_relationship_create_any_entity_access' }
+  access_check.group_latest_revision:
+    class: 'Drupal\group\Entity\Access\GroupLatestRevisionCheck'
+    arguments: ['@entity_type.manager']
+    calls:
+      - ['setContentModerationInfo', ['@?content_moderation.moderation_information']]
+    tags:
+      - { name: 'access_check', applies_to: '_group_latest_revision' }
+
+  cache_context.route.group:
+    class: 'Drupal\group\Cache\Context\RouteGroupCacheContext'
+    arguments: ['@current_route_match', '@entity_type.manager']
+    tags:
+      - { name: 'cache.context'}
+  cache_context.user.group_permissions:
+    class: 'Drupal\group\Cache\Context\GroupPermissionsCacheContext'
+    arguments: ['@current_user', '@group_permission.hash_generator']
+    tags:
+      - { name: 'cache.context'}
+  cache_context.user.is_group_member:
+    class: 'Drupal\group\Cache\Context\IsGroupMemberCacheContext'
+    arguments: ['@current_user', '@entity_type.manager', '@group.membership_loader']
+    tags:
+      - { name: 'cache.context'}
+
+  group.admin_path.route_subscriber:
+    class: 'Drupal\group\Routing\GroupAdminRouteSubscriber'
+    arguments: ['@config.factory']
+    tags:
+      - { name: 'event_subscriber' }
+  group.latest_revision.route_subscriber:
+    class: 'Drupal\group\Entity\Routing\GroupLatestRevisionRouteSubscriber'
+    tags:
+      - { name: 'event_subscriber' }
+  group.revision.route_subscriber:
+    class: 'Drupal\group\Entity\Routing\GroupRevisionRouteSubscriber'
+    tags:
+      - { name: 'event_subscriber' }
+  group.config_subscriber:
+    class: 'Drupal\group\EventSubscriber\ConfigSubscriber'
+    arguments: ['@entity_type.manager', '@group_relation_type.manager']
+    tags:
+      - { name: 'event_subscriber' }
+
+  group.group_route_context:
+    class: 'Drupal\group\Context\GroupRouteContext'
+    arguments: ['@current_route_match', '@entity_type.manager', '@string_translation']
+    tags:
+      - { name: 'context_provider' }
+  group.membership_loader:
+    class: 'Drupal\group\GroupMembershipLoader'
+    arguments: ['@entity_type.manager', '@current_user']
+  group.permissions:
+    class: 'Drupal\group\Access\GroupPermissionHandler'
+    arguments: ['@module_handler', '@string_translation', '@controller_resolver', '@group_relation_type.manager']
+
+  group_permission.hash_generator:
+    class: 'Drupal\group\Access\GroupPermissionsHashGenerator'
+    arguments: ['@private_key', '@cache.static', '@group_permission.calculator']
+
+  # Wrappers for Flexible permissions services.
+  group_permission.calculator:
+    class: 'Drupal\group\Access\GroupPermissionCalculator'
+    arguments: ['@flexible_permissions.chain_calculator']
+  group_permission.checker:
+    class: 'Drupal\group\Access\GroupPermissionChecker'
+    arguments: ['@group_permission.calculator', '@group.membership_loader']
+
+  # Flexible permissions calculators.
+  group_permission.individual_calculator:
+    class: 'Drupal\group\Access\IndividualGroupPermissionCalculator'
+    arguments: ['@entity_type.manager', '@group.membership_loader']
+    tags:
+      - { name: flexible_permission_calculator, priority: -100 }
+  group_permission.synchronized_calculator:
+    class: 'Drupal\group\Access\SynchronizedGroupPermissionCalculator'
+    arguments: ['@entity_type.manager']
+    tags:
+      - { name: flexible_permission_calculator, priority: -50 }
+
+  group.uninstall_validator.group_relationship:
+    class: 'Drupal\group\UninstallValidator\GroupRelationshipUninstallValidator'
+    tags:
+      - { name: 'module_install.uninstall_validator' }
+    arguments: ['@string_translation', '@entity_type.manager', '@group_relation_type.manager']
+    lazy: 'true'
+
+  group_relationship_type.breadcrumb:
+    class: 'Drupal\group\Breadcrumb\GroupRelationshipTypeBreadcrumbBuilder'
+    tags:
+      - { name: 'breadcrumb_builder', priority: 100 }
+
+  group_relation_type.manager:
+    class: 'Drupal\group\Plugin\Group\Relation\GroupRelationTypeManager'
+    arguments: ['@container.namespaces', '@cache.discovery', '@module_handler', '@entity_type.manager']
+    parent: container.trait
+    tags:
+      - { name: plugin_manager_cache_clear }
+
+  # Default group relation handlers.
+  group.relation_handler.access_control:
+    class: 'Drupal\group\Plugin\Group\RelationHandlerDefault\AccessControl'
+    arguments: ['@entity_type.manager', '@group_relation_type.manager']
+    shared: false
+  group.relation_handler.entity_reference:
+    class: 'Drupal\group\Plugin\Group\RelationHandlerDefault\EntityReference'
+    shared: false
+  group.relation_handler.operation_provider:
+    class: 'Drupal\group\Plugin\Group\RelationHandlerDefault\OperationProvider'
+    arguments: ['@module_handler', '@current_user', '@entity_type.manager', '@group_relation_type.manager', '@string_translation']
+    shared: false
+  group.relation_handler.permission_provider:
+    class: 'Drupal\group\Plugin\Group\RelationHandlerDefault\PermissionProvider'
+    arguments: ['@entity_type.manager', '@group_relation_type.manager']
+    shared: false
+  group.relation_handler.post_install:
+    class: 'Drupal\group\Plugin\Group\RelationHandlerDefault\PostInstall'
+    shared: false
+  group.relation_handler.ui_text_provider:
+    class: 'Drupal\group\Plugin\Group\RelationHandlerDefault\UiTextProvider'
+    arguments: ['@entity_type.manager', '@string_translation']
+    shared: false
+
+  # Specific group relation handlers.
+  group.relation_handler.access_control.group_membership:
+    class: 'Drupal\group\Plugin\Group\RelationHandler\GroupMembershipAccessControl'
+    arguments: ['@group.relation_handler.access_control']
+    shared: false
+  group.relation_handler.entity_reference.group_membership:
+    class: 'Drupal\group\Plugin\Group\RelationHandler\GroupMembershipEntityReference'
+    arguments: ['@group.relation_handler.entity_reference']
+    shared: false
+  group.relation_handler.operation_provider.group_membership:
+    class: 'Drupal\group\Plugin\Group\RelationHandler\GroupMembershipOperationProvider'
+    arguments: ['@group.relation_handler.operation_provider', '@current_user', '@string_translation']
+    shared: false
+  group.relation_handler.permission_provider.group_membership:
+    class: 'Drupal\group\Plugin\Group\RelationHandler\GroupMembershipPermissionProvider'
+    arguments: ['@group.relation_handler.permission_provider']
+    shared: false
+  group.relation_handler.post_install.group_membership:
+    class: 'Drupal\group\Plugin\Group\RelationHandler\GroupMembershipPostInstall'
+    arguments: ['@group.relation_handler.post_install', '@entity_type.manager', '@string_translation']
+    shared: false

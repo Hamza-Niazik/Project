@@ -1,0 +1,90 @@
+# @see https://github.com/integratedexperts/drupal_circleci
+version: 2
+aliases:
+  # SSH deployment key fingerprint from CircleCI App -> Project -> Settings -> SSH Permissions.
+  # Replace the value for your project.
+  - &deploy_ssh_fingerprint "2d:71:4d:aa:4d:34:38:b5:8f:af:ca:3b:d4:82:6a:21"
+  - &container_config
+    working_directory: ~/project
+    docker:
+      - image: circleci/php:7.4-cli-browsers
+
+job-build: &job-build
+  steps:
+    - checkout
+    - run: |
+        sudo -E apt-get --allow-releaseinfo-change update && sudo -E apt-get install -y libfreetype6-dev libjpeg62-turbo-dev libpng-dev jq \
+        && sudo -E docker-php-ext-install -j$(nproc) iconv \
+        && if [ "$(php -r "echo PHP_MAJOR_VERSION;")" -gt 5 ] ; then sudo -E docker-php-ext-configure gd --with-freetype --with-jpeg; else sudo -E docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/; fi \
+        && sudo -E docker-php-ext-install -j$(nproc) gd
+    - run: .circleci/build.sh
+    - run: .circleci/lint.sh
+    - run: .circleci/test.sh
+    - run:
+        command: .circleci/process-artifacts.sh
+        when: always
+    - store_test_results:
+        path: /tmp/test_results
+        when: always
+    - store_artifacts:
+        path: /tmp/artifacts
+        when: always
+
+jobs:
+  build-php-7.4:
+    <<: *container_config
+    <<: *job-build
+
+  build-php-8.0:
+    <<: *container_config
+    docker:
+      - image: circleci/php:8.0-cli-browsers
+    <<: *job-build
+
+  build-php-7.4-legacy:
+    <<: *container_config
+    environment:
+      DRUPAL_VERSION: 9.3.5
+      DRUPAL_PROJECT_SHA: 9.x
+    <<: *job-build
+
+  build-php-8.0-legacy:
+    <<: *container_config
+    docker:
+      - image: circleci/php:8.0-cli-browsers
+    environment:
+      DRUPAL_VERSION: 9.3.5
+      DRUPAL_PROJECT_SHA: 9.x
+    <<: *job-build
+
+  deploy:
+    <<: *container_config
+    environment:
+      DEPLOY_SSH_FINGERPRINT: *deploy_ssh_fingerprint
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - *deploy_ssh_fingerprint
+      - run: DEPLOY_BRANCH=${CIRCLE_BRANCH} .circleci/deploy.sh
+
+workflows:
+  version: 2
+  main:
+    jobs:
+      - build-php-7.4:
+          filters:
+            tags:
+              only: /.*/
+      - build-php-8.0:
+          filters:
+            tags:
+              only: /.*/
+      - build-php-7.4-legacy:
+          filters:
+            tags:
+              only: /.*/
+      - build-php-8.0-legacy:
+          filters:
+            tags:
+              only: /.*/

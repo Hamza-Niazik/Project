@@ -1,0 +1,11 @@
+services:
+  # Group relation plugin handlers.
+  group.relation_handler.permission_provider.entity_test_relation:
+    class: 'Drupal\group_test_plugin\Plugin\Group\RelationHandler\FullEntityPermissionProvider'
+    arguments: ['@group.relation_handler.permission_provider', '@entity_type.manager']
+    shared: false
+
+  group.relation_handler.permission_provider.node_relation:
+    class: 'Drupal\group_test_plugin\Plugin\Group\RelationHandler\FullEntityPermissionProvider'
+    arguments: ['@group.relation_handler.permission_provider', '@entity_type.manager']
+    shared: false

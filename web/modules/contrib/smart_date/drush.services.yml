@@ -1,0 +1,5 @@
+services:
+  smart_date.commands:
+    class: \Drupal\smart_date\Commands\SmartDateDrushCommands
+    tags:
+      - { name: drush.command }

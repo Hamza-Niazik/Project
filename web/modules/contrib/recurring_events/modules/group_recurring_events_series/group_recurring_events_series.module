@@ -1,0 +1,44 @@
+<?php
+
+/**
+ * @file
+ * Enables Group functionality for the Recurring events module.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\recurring_events\Entity\EventSeriesTypeInterface;
+use Drupal\Core\Url;
+
+/**
+ * Implements hook_ENTITY_TYPE_insert().
+ */
+function group_recurring_events_series_eventseries_type_insert(EventSeriesTypeInterface $eventserices_type) {
+  if (\Drupal::isConfigSyncing()) {
+    return;
+  }
+  \Drupal::service('plugin.manager.group_content_enabler')->clearCachedDefinitions();
+}
+
+/**
+ * Implements hook_entity_operation().
+ */
+function group_recurring_events_series_entity_operation(EntityInterface $entity) {
+  $operations = [];
+
+  if ($entity->getEntityTypeId() == 'group' && \Drupal::moduleHandler()->moduleExists('views')) {
+    /** @var \Drupal\group\Entity\GroupInterface $entity */
+    if ($entity->hasPermission('access group_recurring_events_series overview', \Drupal::currentUser())) {
+      /** @var \Symfony\Component\Routing\RouterInterface $router */
+      $router = \Drupal::service('router.no_access_checks');
+      if ($router->getRouteCollection()->get('view.group_recurring_events_series.page_1') !== NULL) {
+        $operations['recurring_events_series'] = [
+          'title' => t('Events series'),
+          'weight' => 20,
+          'url' => Url::fromRoute('view.group_recurring_events_series.page_1', ['group' => $entity->id()]),
+        ];
+      }
+    }
+  }
+
+  return $operations;
+}

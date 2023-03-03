@@ -1,0 +1,53 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - recurring_events.eventseries_type.default
+  module:
+    - options
+    - recurring_events
+    - text
+id: eventseries.default.default
+targetEntityType: eventseries
+bundle: default
+mode: default
+content:
+  body:
+    label: above
+    weight: 1
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+    type: text_default
+  event_instances:
+    type: recurring_events_eventinstance_date
+    weight: 3
+    region: content
+    label: above
+    settings:
+      link: '1'
+      date_format: 'F jS, Y h:iA'
+      separator: ' - '
+    third_party_settings: {  }
+  recur_type:
+    label: above
+    weight: 2
+    region: content
+    settings: {  }
+    third_party_settings: {  }
+    type: list_default
+  title:
+    label: above
+    weight: 0
+    region: content
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+    type: string
+hidden:
+  consecutive_recurring_date: true
+  custom_date: true
+  daily_recurring_date: true
+  event_registration: true
+  monthly_recurring_date: true
+  weekly_recurring_date: true

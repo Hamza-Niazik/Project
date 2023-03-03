@@ -1,0 +1,21 @@
+/**
+ * @file
+ * Styling for the widget form.
+ */
+
+.heading-widget--container-with-size {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
+  margin-bottom: 1rem;
+}
+
+.heading-widget--container-with-size > div {
+  flex-grow: 5;
+  padding-right: 1rem;
+}
+.heading-widget--container-with-size > div:last-child {
+  flex-grow: 1;
+  min-width: 150px;
+  padding-right: 0;
+}

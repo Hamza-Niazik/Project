@@ -1,0 +1,44 @@
+field_inheritance.config:
+  type: config_object
+  label: 'Field Inheritance Settings Config'
+  mapping:
+    included_entities:
+      type: string
+      label: 'The included entity types'
+    included_bundles:
+      type: string
+      label: 'The included entity bundles'
+field_inheritance.*:
+  type: config_entity
+  label: 'Field Inheritance'
+  mapping:
+    id:
+      type: string
+      label: 'The id of the inheritance'
+    label:
+      type: string
+      label: 'The inheritance label'
+    type:
+      type: string
+      label: 'The inheritance type'
+    sourceEntityType:
+      type: string
+      label: 'The inheritance source entity type'
+    sourceEntityBundle:
+      type: string
+      label: 'The inheritance source entity bundle'
+    sourceField:
+      type: string
+      label: 'The inheritance source field'
+    destinationEntityType:
+      type: string
+      label: 'The inheritance destination entity type'
+    destinationEntityBundle:
+      type: string
+      label: 'The inheritance destination entity bundle'
+    destinationField:
+      type: string
+      label: 'The inheritance destination field'
+    plugin:
+      type: string
+      label: 'The inheritance plugin'

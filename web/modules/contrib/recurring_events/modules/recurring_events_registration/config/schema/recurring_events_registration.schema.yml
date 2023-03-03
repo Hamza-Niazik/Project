@@ -1,0 +1,40 @@
+recurring_events_registration.registrant.config:
+  type: config_object
+  label: 'Recurring Events Registration Config'
+  mapping:
+    show_capacity:
+      type: boolean
+      label: 'Whether to display the remaining capacity for an event during registration'
+    limit:
+      type: integer
+      label: 'The items per page to show on registrant listing'
+    date_format:
+      type: string
+      label: 'The formatting of dates when displaying registrants'
+    title:
+      type: string
+      label: 'The title of the registrants'
+    email_notifications:
+      type: boolean
+      label: 'Whether to enable email notifications'
+    notifications:
+      type: sequence
+      sequence:
+        type: mapping
+        mapping:
+          enabled:
+            type: boolean
+            label: 'Whether to enable these notifications'
+          subject:
+            type: string
+            label: 'The email subject for these notifications'
+          body:
+            type: string
+            label: 'The email body for these notifications'
+field.widget.settings.event_registration:
+  type: mapping
+  label: 'Recurring Events Show Enable Waitlist'
+  mapping:
+    show_enable_waitlist:
+      type: boolean
+      label: 'Enable Waiting List'

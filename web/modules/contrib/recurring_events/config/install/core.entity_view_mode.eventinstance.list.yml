@@ -1,0 +1,9 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - recurring_events
+id: eventinstance.list
+label: List
+targetEntityType: eventinstance
+cache: true

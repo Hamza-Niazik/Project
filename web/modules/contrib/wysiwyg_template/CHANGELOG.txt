@@ -1,0 +1,5 @@
+8.x-2.0-rc1, 2018-11-24
+-----------------------
+Issue #3000248 by chipway, Pranjal.addweb: Composer Namespace Dependencies in .info.yml
+Issue #3012632 by kevin.dutra, jurgenhaas: Update CKEditor dependency to 4.10.1
+Issue #2984960 by bhanuprakashnani: Change the library download from http to https

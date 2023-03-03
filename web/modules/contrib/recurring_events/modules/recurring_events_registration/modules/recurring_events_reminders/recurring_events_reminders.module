@@ -1,0 +1,198 @@
+<?php
+
+/**
+ * @file
+ * Primary module hooks for Recurring Events Registration Reminders module.
+ */
+
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\Entity\EntityInterface;
+
+/**
+ * Implements hook_entity_base_field_info_alter().
+ */
+function recurring_events_reminders_entity_base_field_info_alter(&$fields, EntityTypeInterface $entity_type) {
+
+  $entity_type_id = $entity_type->id();
+
+  if ($entity_type_id === 'eventseries') {
+    $fields['registration_reminders'] = BaseFieldDefinition::create('registration_reminders')
+      ->setName('registration_reminders')
+      ->setLabel(t('Event Registration Reminders'))
+      ->setDescription('The event registration reminders configuration.')
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE)
+      ->setRevisionable(TRUE)
+      ->setTranslatable(FALSE)
+      ->setCardinality(1)
+      ->setRequired(FALSE)
+      ->setTargetEntityTypeId($entity_type->id())
+      ->setDisplayOptions('form', [
+        'type' => 'registration_reminders',
+        'weight' => 10,
+      ]);
+  }
+
+  if ($entity_type_id === 'eventinstance') {
+    $fields['reminder_date'] = BaseFieldDefinition::create('timestamp')
+      ->setName('reminder_date')
+      ->setLabel(t('Reminder Date'))
+      ->setDescription('The date that reminders should be sent.')
+      ->setDisplayConfigurable('form', FALSE)
+      ->setDisplayConfigurable('view', FALSE)
+      ->setRevisionable(FALSE)
+      ->setTranslatable(FALSE)
+      ->setTargetEntityTypeId($entity_type_id)
+      ->setCardinality(1)
+      ->setRequired(FALSE);
+
+    $fields['reminder_sent'] = BaseFieldDefinition::create('timestamp')
+      ->setName('reminder_sent')
+      ->setLabel(t('Reminder Sent'))
+      ->setDescription('The date that reminders were sent.')
+      ->setDisplayConfigurable('form', FALSE)
+      ->setDisplayConfigurable('view', FALSE)
+      ->setRevisionable(FALSE)
+      ->setTranslatable(FALSE)
+      ->setTargetEntityTypeId($entity_type_id)
+      ->setCardinality(1)
+      ->setRequired(FALSE);
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert().
+ *
+ * Set the reminder date for all instances in this series.
+ */
+function recurring_events_reminders_eventseries_insert(EntityInterface $entity) {
+  if (\Drupal::isConfigSyncing()) {
+    return;
+  }
+  if ($entity->registration_reminders->reminder) {
+    $amount = $entity->registration_reminders->reminder_amount;
+    $units = $entity->registration_reminders->reminder_units;
+    $instances = $entity->event_instances->referencedEntities();
+    if (!empty($instances)) {
+      foreach ($instances as $instance) {
+        $instance_date = $instance->date->start_date->getTimestamp();
+        $reminder_date = strtotime('-' . $amount . ' ' . $units, $instance_date);
+        $instance->set('reminder_date', $reminder_date);
+        $instance->setNewRevision(FALSE);
+        $instance->save();
+      }
+    }
+  }
+
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_update().
+ *
+ * Set the reminder date for all instances in this series.
+ */
+function recurring_events_reminders_eventseries_update(EntityInterface $entity) {
+  $original = $entity->original;
+  if ($entity->registration_reminders->reminder) {
+    $entity = $entity->load($entity->id());
+
+    if ($original->registration_reminders->reminder_amount !== $entity->registration_reminders->reminder_amount
+      || $original->registration_reminders->reminder_units !== $entity->registration_reminders->reminder_units
+    ) {
+      $amount = $entity->registration_reminders->reminder_amount;
+      $units = $entity->registration_reminders->reminder_units;
+      $instances = $entity->event_instances->referencedEntities();
+      if (!empty($instances)) {
+        foreach ($instances as $instance) {
+          $instance_date = $instance->date->start_date->getTimestamp();
+          $reminder_date = strtotime('-' . $amount . ' ' . $units, $instance_date);
+          $instance->set('reminder_date', $reminder_date);
+          $instance->set('reminder_sent', NULL);
+          $instance->setNewRevision(FALSE);
+          $instance->save();
+        }
+      }
+    }
+  }
+  // If reminders have been disabled, then set the reminder_date to NULL.
+  elseif ($original->registration_reminders->reminder !== $entity->registration_reminders->reminder) {
+    $instances = $entity->event_instances->referencedEntities();
+    if (!empty($instances)) {
+      foreach ($instances as $instance) {
+        $instance->set('reminder_date', NULL);
+        $instance->setNewRevision(FALSE);
+        $instance->save();
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function recurring_events_reminders_cron() {
+  $query = \Drupal::entityTypeManager()->getStorage('eventinstance')->getQuery();
+  $event_instances = $query
+    ->condition('reminder_date', NULL, 'IS NOT NULL')
+    ->condition('reminder_sent', NULL, 'IS NULL')
+    ->condition('reminder_date', time(), '<=')
+    ->execute();
+
+  if (!empty($event_instances)) {
+    $instances = \Drupal::entityTypeManager()->getStorage('eventinstance')->loadMultiple($event_instances);
+
+    /** @var \Drupal\recurring_events\Entity\EventInstance */
+    foreach ($instances as $instance) {
+      $instance->set('reminder_sent', time());
+      $instance->setNewRevision(FALSE);
+      $instance->save();
+
+      /** @var \Drupal\recurring_events_registration\RegistrationCreationService */
+      $registration_creation_service = \Drupal::service('recurring_events_registration.creation_service');
+      $registration_creation_service->setEventInstance($instance);
+
+      $registrants = $registration_creation_service->retrieveRegisteredParties();
+      if (empty($registrants)) {
+        return;
+      }
+
+      $key = 'registration_reminder';
+
+      // Send an email to all registrants.
+      foreach ($registrants as $registrant) {
+        recurring_events_registration_send_notification($key, $registrant);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_recurring_events_registration_notification_types_alter().
+ */
+function recurring_events_reminders_recurring_events_registration_notification_types_alter(array &$notification_types) {
+  $notification_types += [
+    'registration_reminder' => [
+      'name' => t('Registration Reminder'),
+      'description' => t('Send an email to remind registrants about upcoming events? Note: The event series must be configured to send reminders.'),
+    ],
+  ];
+}
+
+/**
+ * Implements hook_config_schema_info_alter().
+ */
+function recurring_events_reminders_config_schema_info_alter(&$definitions) {
+  $definitions['recurring_events_registration.registrant.config']['mapping']['registration_reminder_enabled'] = [
+    'type' => 'boolean',
+    'label' => 'Whether to enable email reminders for upcoming events',
+  ];
+  $definitions['recurring_events_registration.registrant.config']['mapping']['registration_reminder_subject'] = [
+    'type' => 'string',
+    'label' => 'The email subject for the reminder emails',
+  ];
+  $definitions['recurring_events_registration.registrant.config']['mapping']['registration_reminder_body'] = [
+    'type' => 'string',
+    'label' => 'The email body for the reminder emails',
+  ];
+}

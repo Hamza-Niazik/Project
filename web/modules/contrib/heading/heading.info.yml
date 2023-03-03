@@ -1,0 +1,13 @@
+name: Heading
+type: module
+description: "Provides a text field that will be formatted as a heading (h1-h6)."
+package: Fields
+core: 8.x
+core_version_requirement: ^8 || ^9 || ^10
+dependencies:
+  - drupal:field
+
+# Information added by Drupal.org packaging script on 2022-06-16
+version: '8.x-1.7'
+project: 'heading'
+datestamp: 1655361585

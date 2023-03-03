@@ -1,0 +1,6 @@
+# Field Inheritance permissions.
+
+administer field inheritance:
+  title: 'Administer Field Inheritance configuration'
+  description: 'Allow to access the administration form to configure Field Inheritance.'
+  restrict access: true

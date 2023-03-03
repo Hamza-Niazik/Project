@@ -1,0 +1,77 @@
+# Parent Menu Structure.
+events.admin.overview:
+  title: 'Events'
+  description: 'Configure Event Series and Instances.'
+  route_name: events.admin.overview
+  parent: system.admin_structure
+
+# Content page.
+events.admin.content:
+  title: 'Events'
+  description: 'View events and registrations.'
+  route_name: events.admin.content
+  parent: system.admin_content
+
+# Add Event page.
+entity.eventseries.add_page:
+  title: 'Add Event'
+  description: 'Add a new event.'
+  route_name: entity.eventseries.add_page
+  parent: events.admin.content
+  weight: 1
+
+# Event Series listing page.
+eventseries.listing:
+  title: 'Event Series'
+  description: 'Event series listing.'
+  route_name: entity.eventseries.admin_collection
+  parent: events.admin.content
+  weight: 2
+
+# Event Instance listing page.
+eventinstance.listing:
+  title: 'Event Instances'
+  description: 'Event instance listing.'
+  route_name: entity.eventinstance.admin_collection
+  parent: events.admin.content
+  weight: 3
+
+# Events Series settings admin page.
+eventseries.admin.structure.settings:
+  title: 'Event Series Settings'
+  description: 'Configure Event Series Entity'
+  route_name:  eventseries.settings
+  parent: events.admin.overview
+  weight: 0
+
+# Events Instances settings admin page.
+eventinstance.admin.structure.settings:
+  title: 'Event Instance Settings'
+  description: 'Configure Event Instance Entity'
+  route_name:  eventinstance.settings
+  parent: events.admin.overview
+  weight: 2
+
+# Events Series types admin page.
+entity.eventseries_type.collection:
+  title: 'Event Series Types'
+  description: 'Configure Event Series Types'
+  route_name: entity.eventseries_type.collection
+  parent: events.admin.overview
+  weight: 1
+
+# Event Series types add page.
+entity.eventseries_type.add_form:
+  title: 'Add Series Type'
+  description: 'Add An Event Series Type'
+  route_name: entity.eventseries_type.add_form
+  parent: entity.eventseries_type.collection
+  weight: -99
+
+# Events Instance types admin page.
+entity.eventinstance_type.collection:
+  title: 'Event Instance Types'
+  description: 'Configure Event Instance Types'
+  route_name: entity.eventinstance_type.collection
+  parent: events.admin.overview
+  weight: 3

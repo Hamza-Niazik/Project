@@ -1,0 +1,28 @@
+{
+  "name": "drupal/flexible_permissions",
+  "type": "drupal-module",
+  "description": "This module allows you to gather, calculate and cache permissions from a myriad of sources",
+  "homepage": "http://drupal.org/project/flexible_permissions",
+  "authors": [
+    {
+      "name": "Kristiaan Van den Eynde",
+      "homepage": "https://www.drupal.org/u/kristiaanvandeneynde",
+      "role": "Maintainer"
+    },
+    {
+      "name": "Mathias Wächter",
+      "homepage": "https://www.drupal.org/u/mef",
+      "role": "Maintainer"
+    }
+  ],
+  "support": {
+    "issues": "https://drupal.org/project/issues/flexible_permissions",
+    "source": "https://git.drupalcode.org/project/flexible_permissions"
+  },
+  "license": "GPL-2.0-or-later",
+  "minimum-stability": "dev",
+  "require": {
+    "drupal/core": "^9 || ^10",
+    "drupal/variationcache": "^1.0"
+  }
+}

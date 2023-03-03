@@ -1,0 +1,11 @@
+name: 'Nodeviewcount Module Hooks Tests'
+type: module
+description: 'Support module for nodeviewcount hooks testing.'
+package: Testing
+core: 8.x
+core_version_requirement: ^8 || ^9
+
+# Information added by Drupal.org packaging script on 2021-08-26
+version: '8.x-1.0-alpha2'
+project: 'nodeviewcount'
+datestamp: 1629971532

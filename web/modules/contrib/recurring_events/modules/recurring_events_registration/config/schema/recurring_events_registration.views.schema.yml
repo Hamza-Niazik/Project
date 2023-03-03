@@ -1,0 +1,8 @@
+views.filter.eventinstance_registration_availability_count:
+  type: views.filter.numeric
+
+views.filter_value.eventinstance_registration_availability_count:
+  type: views.filter_value.numeric
+
+views.argument.eventinstance_registration_availability_count:
+  type: views.argument.numeric

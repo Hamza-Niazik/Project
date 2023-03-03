@@ -1,0 +1,41 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - recurring_events.eventinstance_type.default
+  module:
+    - datetime_range
+    - recurring_events
+    - text
+id: eventinstance.default.default
+targetEntityType: eventinstance
+bundle: default
+mode: default
+content:
+  date:
+    label: above
+    type: daterange_default
+    weight: 1
+    settings:
+      timezone_override: ''
+      format_type: long
+      separator: '-'
+    region: content
+    third_party_settings: {  }
+  description:
+    type: text_default
+    weight: 2
+    region: content
+    label: above
+    settings: {  }
+    third_party_settings: {  }
+  title:
+    type: string
+    weight: 0
+    region: content
+    label: above
+    settings:
+      link_to_entity: false
+    third_party_settings: {  }
+hidden:
+  body: true

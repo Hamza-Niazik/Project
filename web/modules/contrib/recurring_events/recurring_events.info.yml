@@ -1,0 +1,14 @@
+name: 'Recurring Events'
+type: module
+description: 'Provides the ability to create recurring events'
+core_version_requirement: ^8.9 || ^9
+package: 'Recurring Events'
+dependencies:
+  - drupal:datetime_range
+  - drupal:options
+  - field_inheritance:field_inheritance
+
+# Information added by Drupal.org packaging script on 2022-09-23
+version: '2.0.0-rc5'
+project: 'recurring_events'
+datestamp: 1663900750

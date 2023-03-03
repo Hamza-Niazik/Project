@@ -1,0 +1,29 @@
+field.field_settings.duration:
+  type: mapping
+  label: 'Duration settings'
+  mapping:
+    granularity:
+      type: granularity
+      label: 'Granularity'
+
+field.value.duration:
+  type: mapping
+  lable: 'Default value'
+  mapping:
+    duration:
+      type: iso_8601_string
+      label: 'ISO 8601 Duration'
+    seconds:
+      type: integer
+      label: 'Number of seconds the duration represents'
+
+field.formatter.settings.duration_human_display:
+  type: mapping
+  label: 'Duration human display formatter settings'
+  mapping:
+    text_length:
+      type: string
+      label: 'Text Length'
+    separator:
+      type: string
+      label: 'Separator'
